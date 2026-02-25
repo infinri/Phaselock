@@ -7,10 +7,11 @@ This document is the **complete directory index** for the AI Workflow knowledge 
 It describes what each directory contains so AI and humans can quickly locate relevant guidance.
 
 **Key files:**
-- `MANIFEST.md` — Navigation by task type (start here)
+- `SKILL.md` — Skill entry point and task→document navigation (start here)
 - `OVERVIEW.md` — This file (directory index)
-- `CONTRIBUTING.md` — How to contribute to this knowledge base
-- `README.md` — Entry point and usage guide
+- `CONTRIBUTING.md` — How to add rules to this knowledge base
+- `README.md` — Human-readable project overview
+- `MANIFEST.md` — Extended task-to-document mapping
 
 ---
 
@@ -89,18 +90,6 @@ Current files:
 
 ---
 
-### `bible/frameworks/`
-**Framework-specific rules and constraints**
-
-Contains:
-- Framework behavior and conventions
-- Plugin/extension patterns
-- Integration guidelines
-
-Current files: *(empty - awaiting rules)*
-
----
-
 ### `bible/languages/`
 **Language-specific coding standards**
 
@@ -108,7 +97,7 @@ Subdirectories:
 - `php/` — PHP coding standards, error handling
 
 Current files:
-- `php/coding-standards.md` — PHP-TYPE-001, PHP-BRACE-001, PHP-ERR-001
+- `php/coding-standards.md` — PHP-TYPE-001, PHP-ERR-002
 - `php/error-handling.md` — PHP-ERR-001, PHP-ERR-002
 
 ---
@@ -126,18 +115,6 @@ Current files:
 
 ---
 
-### `bible/security/`
-**Data protection and system integrity**
-
-Contains:
-- Authentication and ACL rules
-- Input validation
-- Secrets management
-
-Current files: *(empty - awaiting rules)*
-
----
-
 ### `bible/testing/`
 **Verification, confidence, and regression prevention**
 
@@ -151,15 +128,11 @@ Current files:
 
 ---
 
-### `bible/playbooks/`
-**Step-by-step workflows for common scenarios**
+### Empty directories (awaiting rules)
 
-Contains:
-- Feature development workflows
-- Bug fix procedures
-- Refactoring checklists
-
-Current files: *(empty - awaiting playbooks)*
+- `bible/frameworks/` — Framework-specific rules (`FW-` prefix)
+- `bible/security/` — Data protection and system integrity (`SEC-` prefix)
+- `bible/playbooks/` — Step-by-step workflows (`PLAY-` prefix)
 
 ---
 

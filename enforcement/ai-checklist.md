@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document defines **guidelines and checklists for AI-assisted development** (Windsurf/Cascade).
+This document defines **guidelines and checklists for AI-assisted development**.
 
-It ensures AI actions are consistent, safe, and aligned with project standards.
+It ensures AI agent actions are consistent, safe, and aligned with project standards.
 
 ---
 
@@ -14,14 +14,14 @@ It ensures AI actions are consistent, safe, and aligned with project standards.
 - **Focused Changes**: One concern per edit/commit
 - **Existing Patterns**: Follow patterns already established in the codebase
 - **No Placeholders**: Always provide complete, runnable code
-- **Action**: Use `Edit` or `MultiEdit` tools; avoid outputting code in chat unless requested
+- **Action**: Use file editing tools directly; avoid outputting code in chat unless requested
 
 ---
 
 ## Investigation & Analysis
 
-- **Search First**: Use `grep_search` to find existing implementations before writing new code
-- **Read Context**: Use `Read` tool to understand surrounding code
+- **Search First**: Search the codebase for existing implementations before writing new code
+- **Read Context**: Read surrounding code to understand context
 - **Verify Assumptions**: Don't assume; check the actual codebase
 - **Action**: Always search for similar code before implementing new functionality
 
@@ -72,19 +72,4 @@ Before writing any code, verify:
 - [ ] Dependencies are injected, not instantiated (Dependency Inversion)
 - [ ] Tests are planned or implemented
 
----
-
-## Summary Directive
-
-When presented with any coding task:
-
-1. **Search** for existing similar implementations
-2. **Identify** the single best location for the code (centralized)
-3. **Choose** the simplest solution (KISS)
-4. **Design** for extension and composition over modification and inheritance
-5. **Ensure** single responsibility and proper abstraction (SOLID)
-6. **Consider** algorithm efficiency (Big O)
-7. **Implement** with minimal, focused changes
-8. **Verify** with tests or provide verification commands
-
-**Core Philosophy**: Write code once in the right place, make it reusable, keep it simple, and design for extension rather than modification.
+**Core philosophy**: Write code once in the right place, make it reusable, keep it simple, and design for extension rather than modification.

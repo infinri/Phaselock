@@ -1,99 +1,67 @@
-# Coding Bible — Contributing Guide
+# AI Workflow — Contributing Guide
 
-## Purpose
+How rules and guidance are added to this knowledge base.
 
-This document defines **how rules and guidance are added to the Coding Bible**.
+## Authority model
 
-It exists to ensure that:
-- rules are structured consistently
-- rules are machine-addressable at scale
-- intent is preserved exactly as provided
-- both humans and AI can add rules safely
+All rules originate from **explicit human intent**. The AI acts as a structural assistant — it may format rules, assign IDs, apply metadata, and place rules in the correct location, but it may **not** invent rules, infer unstated constraints, or merge/split rules without instruction.
 
-This process applies equally to:
-- engineers adding rules manually
-- AI adding rules on behalf of engineers
+## When to add a rule
 
----
-
-## Authority Model
-
-### Human Authority
-
-All rules originate from **explicit human intent**.
-
-A rule may only be added when a human:
-- provides the rule content directly, or
-- explicitly instructs the AI to record a rule
-
-### AI Role
-
-The AI acts as a **structural assistant**, not an author.
-
-The AI may:
-- format rules
-- assign rule IDs
-- apply tags and metadata
-- place rules in the correct location
-- request clarification if information is missing
-
-The AI may **not**:
-- invent new rules
-- infer unstated constraints
-- add exceptions or rationale not provided
-- merge or split rules without instruction
-
----
-
-## When to Add a Rule
-
-A rule should be added when at least one of the following is true:
+Add a rule when:
 - a mistake has occurred more than once
 - a constraint is non-obvious
 - a framework behavior is surprising
 - violating the guidance causes real risk
 - architectural intent must be preserved
 
-Do **not** add rules for:
-- obvious language syntax
-- personal style preferences
-- temporary experiments
-- speculative best practices
+Do **not** add rules for obvious language syntax, personal style preferences, temporary experiments, or speculative best practices.
 
----
+## Rule placement
 
-## Rule Placement
+Place rules under the appropriate domain directory in `bible/`:
 
-Rules must be placed under the appropriate domain directory:
-
-Examples:
 - Database rules → `bible/database/`
-- Magento rules → `bible/magento/`
 - Security rules → `bible/security/`
 - Architecture rules → `bible/architecture/`
+- Framework rules → `bible/frameworks/`
 
-If a rule spans multiple domains:
-- place it in the most specific domain
-- cross-reference it from others if needed
+If a rule spans multiple domains, place it in the most specific domain and cross-reference from others.
 
----
+## Rule format
 
-## Rule Metadata (Required)
-
-All enforceable guidance in this Bible is expressed as **explicit rule blocks**.
-
-Each rule block **must** include its own metadata and must be independently identifiable, searchable, and extractable.
-
-Metadata applies to the **rule itself**, not the file.
-
----
-
-### Rule Boundaries
-
-Every rule **must** be wrapped in explicit START / END markers.
+Every rule **must** be wrapped in START/END markers and include metadata. Use this template:
 
 ```md
-<!-- RULE START: DB-TXN-001 -->
-## Rule DB-TXN-001
-...
-<!-- RULE END: DB-TXN-001 -->
+<!-- RULE START: PREFIX-NAME-NNN -->
+## Rule PREFIX-NAME-NNN: Short Title
+
+**Domain**: Domain Name  
+**Severity**: Critical | High | Medium | Low
+
+### Statement
+What must or must not be done.
+
+### Example
+Code example (if applicable).
+
+### Action
+What the developer/agent should do in practice.
+
+### Rationale
+Why this rule exists.
+<!-- RULE END: PREFIX-NAME-NNN -->
+```
+
+### Rule ID conventions
+
+- Format: `PREFIX-NAME-NNN` (e.g., `DB-SQL-001`, `ARCH-DI-001`)
+- Prefix must match the domain (see [OVERVIEW.md](OVERVIEW.md) Quick Reference table)
+- Numbers are zero-padded to 3 digits
+- IDs must be unique across the entire knowledge base
+
+### After adding a rule
+
+1. Update [SKILL.md](SKILL.md) task navigation if rule IDs changed
+2. Update [MANIFEST.md](MANIFEST.md) if a new domain was added
+3. Update [OVERVIEW.md](OVERVIEW.md) file listings with new rule IDs
