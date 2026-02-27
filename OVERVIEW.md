@@ -34,6 +34,7 @@ Contains:
 
 Current files:
 - `ai-checklist.md` — Code generation standards, pre-implementation checklist
+- `reasoning-discipline.md` — Mandatory pre-implementation reasoning, post-generation verification, context retrieval discipline (`ENF-PRE-001`–`004`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
 
 ---
 
@@ -71,9 +72,10 @@ Contains:
 - Code organization rules
 - Extension patterns
 - Dependency management
+- Named constants for business rules
 
 Current files:
-- `principles.md` — ARCH-ORG-001, ARCH-EXT-001, ARCH-DI-001
+- `principles.md` — ARCH-ORG-001, ARCH-EXT-001, ARCH-DI-001, ARCH-CONST-001
 
 ---
 
@@ -128,9 +130,22 @@ Current files:
 
 ---
 
+### `bible/frameworks/magento/`
+**Magento 2-specific implementation constraints**
+
+Contains:
+- Persistence-backed validation requirements
+- Repository-only entity retrieval
+- Quote state execution timing
+- Plugin targeting rules
+
+Current files:
+- `magento/implementation-constraints.md` — FW-M2-001, FW-M2-002, FW-M2-003, FW-M2-004
+
+---
+
 ### Empty directories (awaiting rules)
 
-- `bible/frameworks/` — Framework-specific rules (`FW-` prefix)
 - `bible/security/` — Data protection and system integrity (`SEC-` prefix)
 - `bible/playbooks/` — Step-by-step workflows (`PLAY-` prefix)
 
@@ -142,7 +157,7 @@ Current files:
 |-----------|--------|-------------|
 | `bible/architecture/` | System design | `ARCH-` |
 | `bible/database/` | SQL / Data | `DB-` |
-| `bible/frameworks/` | Frameworks | `FW-` |
+| `bible/frameworks/magento/` | Magento 2 | `FW-M2-` |
 | `bible/languages/php/` | PHP | `PHP-` |
 | `bible/performance/` | Performance | `PERF-` |
 | `bible/security/` | Security | `SEC-` |

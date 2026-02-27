@@ -40,7 +40,7 @@ ai-workflow/
     ├── languages/php/   # PHP- rules
     ├── performance/     # PERF- rules
     ├── testing/         # TEST- rules
-    ├── frameworks/      # FW- rules (awaiting)
+    ├── frameworks/magento/  # FW-M2- rules
     ├── security/        # SEC- rules (awaiting)
     └── playbooks/       # Workflows (awaiting)
 ```

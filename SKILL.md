@@ -31,7 +31,7 @@ Read the documents listed for each matching task type. Start with [rules/CORE_PR
 
 When introducing modules, changing system boundaries, or modifying core flows:
 
-- [bible/architecture/principles.md](bible/architecture/principles.md) — Code organization, extension points, dependency injection (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`)
+- [bible/architecture/principles.md](bible/architecture/principles.md) — Code organization, extension points, dependency injection, named constants (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`, `ARCH-CONST-001`)
 
 ### Database / SQL
 
@@ -52,6 +52,12 @@ When optimizing slow paths, addressing resource issues, or introducing caching:
 
 - [bible/performance/profiling.md](bible/performance/profiling.md) — Algorithm complexity, optimization order, lazy loading (`PERF-BIGO-001`, `PERF-OPT-001`, `PERF-LAZY-001`)
 
+### Frameworks / Magento 2
+
+When writing plugins, observers, validation, or entity retrieval in Magento 2:
+
+- [bible/frameworks/magento/implementation-constraints.md](bible/frameworks/magento/implementation-constraints.md) — Persistence-backed validation, repository-only retrieval, quote state timing, plugin targeting (`FW-M2-001`, `FW-M2-002`, `FW-M2-003`, `FW-M2-004`)
+
 ### Testing
 
 When adding tests, refactoring with risk, or addressing regressions:
@@ -63,6 +69,7 @@ When adding tests, refactoring with risk, or addressing regressions:
 When reviewing AI-generated code or understanding assistant behavior expectations:
 
 - [enforcement/ai-checklist.md](enforcement/ai-checklist.md) — Pre-implementation checklist, minimal code generation rules
+- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory pre-implementation reasoning, post-generation verification, context retrieval discipline (`ENF-PRE-001`–`004`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
 - [prompts/cascade-best-practices.md](prompts/cascade-best-practices.md) — Prompt engineering guidelines
 
 ## Rule format

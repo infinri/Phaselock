@@ -71,3 +71,23 @@ Never use `new` for dependencies inside classes; inject them.
 ### Rationale
 Dependency injection enables testability, flexibility, and proper separation of concerns. Hard-coded dependencies create tight coupling and make testing difficult.
 <!-- RULE END: ARCH-DI-001 -->
+
+---
+
+<!-- RULE START: ARCH-CONST-001 -->
+## Rule ARCH-CONST-001: Named Constants for Business Rules
+
+**Domain**: Architecture  
+**Severity**: High
+
+### Statement
+Every named constant must correspond to a documented business rule. Magic numbers and magic strings are forbidden. Every threshold, group ID, prefix, or flag must be a named constant with a comment referencing the business requirement it encodes.
+
+If the value is environment-specific or configurable, it must be sourced from config, not hardcoded.
+
+### Action
+Before hardcoding any threshold, ID, or string literal that encodes business logic, define it as a named constant with a comment that references the business requirement. If the value varies by environment, source it from system configuration.
+
+### Rationale
+Magic values obscure intent, make maintenance error-prone, and create implicit dependencies between business rules and code. Named constants with documented origins ensure traceability and safe modification.
+<!-- RULE END: ARCH-CONST-001 -->
