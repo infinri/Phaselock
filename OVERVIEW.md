@@ -34,7 +34,7 @@ Contains:
 
 Current files:
 - `ai-checklist.md` — Code generation standards, pre-implementation checklist
-- `reasoning-discipline.md` — Mandatory pre-implementation reasoning, phased gate protocol, post-generation verification, context retrieval discipline (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`005`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
+- `reasoning-discipline.md` — Mandatory pre-implementation reasoning, phased gate protocol (incl. phased code generation and test-first gate), post-generation verification (incl. structured findings table, static analysis gate, operational proof traces), context retrieval discipline (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`007`, `ENF-POST-001`–`008`, `ENF-CTX-001`–`003`)
 - `system-dynamics.md` — Concurrency simulation, temporal truth sources, state transition atomicity, policy vs mechanism separation, integration reality check (`ENF-SYS-001`–`005`), Phase D protocol
 - `security-boundaries.md` — Access boundary declarations, data exposure minimization (`ENF-SEC-001`–`002`)
 - `operational-claims.md` — Operational claim validation, queue configuration completeness (`ENF-OPS-001`–`002`)

@@ -24,7 +24,7 @@ These apply to any code task regardless of domain:
 
 - [rules/CORE_PRINCIPLES.md](rules/CORE_PRINCIPLES.md) — DRY, SOLID, KISS, Composition
 - [enforcement/ai-checklist.md](enforcement/ai-checklist.md) — Pre-implementation checklist
-- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory reasoning constraints: pre-implementation (`ENF-PRE-001`–`004`), **phased gate protocol** (`ENF-GATE-001`–`005`), post-generation (`ENF-POST-001`–`005`), context retrieval (`ENF-CTX-001`–`003`)
+- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory reasoning constraints: pre-implementation (`ENF-PRE-001`–`004`), **phased gate protocol** (`ENF-GATE-001`–`007` incl. phased code generation and test-first gate), post-generation (`ENF-POST-001`–`008` incl. structured findings table, static analysis gate, operational proof traces), context retrieval (`ENF-CTX-001`–`003`)
 - [enforcement/system-dynamics.md](enforcement/system-dynamics.md) — System dynamics: concurrency simulation, temporal truth, state atomicity, policy/mechanism, integration reality (`ENF-SYS-001`–`005`), **Phase D protocol**
 - [enforcement/security-boundaries.md](enforcement/security-boundaries.md) — Security: access boundary declarations, data exposure minimization (`ENF-SEC-001`–`002`)
 - [enforcement/operational-claims.md](enforcement/operational-claims.md) — Operations: claim validation, queue completeness (`ENF-OPS-001`–`002`)

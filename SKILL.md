@@ -21,14 +21,16 @@ metadata:
 1. **Identify the task domain** from the navigation table below
 2. **Read only the relevant documents** — do not load the entire knowledge base
 3. **State which documents were consulted** before proposing any solution
-4. **If the task involves plugins, observers, validation, or entity retrieval**: follow the **Phased Implementation Protocol** (`ENF-GATE-001`–`005` in [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md)):
+4. **If the task involves plugins, observers, validation, or entity retrieval**: follow the **Phased Implementation Protocol** (`ENF-GATE-001`–`007` in [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md)):
    - **Phase A** → Call-path declaration ONLY → halt for review
    - **Phase B** → Domain invariant declaration ONLY → halt for review
    - **Phase C** → Seam justification ONLY → halt for review
    - **Phase D** → Failure & concurrency modeling ONLY (when triggered) → halt for review
-   - **Only after all phases approved** → proceed to code
+   - **Test Skeletons** → Generate test skeletons with assertions BEFORE implementation → halt for review (`ENF-GATE-007`)
+   - **Sliced Code Generation** → Generate implementation in dependency-ordered slices, each with self-validation and human gate (`ENF-GATE-006`)
 5. **If the task involves concurrency, async processing, state transitions, or multi-actor writes**: Phase D is mandatory. See trigger conditions in [enforcement/system-dynamics.md](enforcement/system-dynamics.md).
-6. **If guidance is missing or ambiguous**: state it explicitly, ask for clarification, propose a conservative default. Silent guessing is never allowed.
+6. **Post-generation verification is mandatory**: structured findings table (`ENF-POST-006`), static analysis (`ENF-POST-007`), and operational proof traces (`ENF-POST-008`) must be produced per slice.
+7. **If guidance is missing or ambiguous**: state it explicitly, ask for clarification, propose a conservative default. Silent guessing is never allowed.
 
 ## Task → document navigation
 
@@ -95,7 +97,7 @@ When making performance/throughput claims or configuring message queues:
 When reviewing AI-generated code or understanding assistant behavior expectations:
 
 - [enforcement/ai-checklist.md](enforcement/ai-checklist.md) — Pre-implementation checklist, minimal code generation rules
-- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory pre-implementation reasoning, post-generation verification, context retrieval discipline, Phase D hard gate (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`005`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
+- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory pre-implementation reasoning, phased code generation, test-first gate, post-generation verification (structured findings table, static analysis gate, operational proof traces), context retrieval discipline, Phase D hard gate (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`007`, `ENF-POST-001`–`008`, `ENF-CTX-001`–`003`)
 - [enforcement/system-dynamics.md](enforcement/system-dynamics.md) — System dynamics enforcement, Phase D protocol (`ENF-SYS-001`–`005`)
 - [enforcement/security-boundaries.md](enforcement/security-boundaries.md) — Security boundary enforcement (`ENF-SEC-001`–`002`)
 - [enforcement/operational-claims.md](enforcement/operational-claims.md) — Operational claim enforcement (`ENF-OPS-001`–`002`)

@@ -178,16 +178,18 @@ Seam justification depends on approved call-paths and domain invariants. Present
 ### Statement
 The AI must never:
 
-- Combine two or more phases (A, B, C) into a single output
+- Combine two or more phases (A, B, C, D) into a single output
 - Skip a phase because it appears trivial or obvious
-- Produce implementation code before all three phases have been individually presented and approved
+- Produce implementation code before all applicable phases have been individually presented and approved
+- Produce implementation code before test skeletons have been approved (ENF-GATE-007)
+- Generate multiple code slices in a single output without justification (ENF-GATE-006)
 - Infer approval (e.g., "since the call-path is straightforward, I'll proceed to code")
 
 ### Action
-Any output that contains content from multiple phases, or that contains implementation code before all phases are approved, is a constraint violation. The AI must revise and re-present the current phase only.
+Any output that contains content from multiple phases, or that contains implementation code before all phases and test skeletons are approved, is a constraint violation. The AI must revise and re-present the current phase or slice only.
 
 ### Rationale
-Without an explicit anti-collapse rule, the AI's generative behavior will optimize for output completeness over review quality. This rule is the structural enforcement that prevents regression to single-pass code generation.
+Without an explicit anti-collapse rule, the AI's generative behavior will optimize for output completeness over review quality. This rule is the structural enforcement that prevents regression to single-pass code generation. It applies to the full protocol: planning phases (A–D), test-first gate (ENF-GATE-007), and sliced code generation (ENF-GATE-006).
 <!-- RULE END: ENF-GATE-004 -->
 
 ---
@@ -232,6 +234,108 @@ If any item is incomplete, the AI must declare the gap and halt.
 ### Rationale
 Without a formal blocking gate, system dynamics analysis degenerates into prose that the AI writes and then ignores. The existing gates (ENF-GATE-001 through 004) work because they are hard blocks — the AI cannot proceed without approval. Phase D must have identical enforcement weight, or the AI will write a concurrency section, produce some words about race windows, and then proceed without truly enforcing atomic design.
 <!-- RULE END: ENF-GATE-005 -->
+
+---
+
+<!-- RULE START: ENF-GATE-006 -->
+## Rule ENF-GATE-006: Phased Code Generation — Verified Slices
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+After all planning phases (A–D) are approved, the AI must NOT generate all implementation files in a single pass. Code generation must be broken into **verified slices**, where each slice is a small surface area that the AI self-validates against the approved plan before proceeding.
+
+The slice order follows dependency layers:
+
+1. **Slice 1 — Schema & Interfaces**: Database schema (`db_schema.xml` or migration), service contract interfaces, DTOs/data models. The AI generates ONLY these files, self-validates against the approved Phase B (domain invariants) and Phase C (seam justification), then halts for human review.
+2. **Slice 2 — Persistence Layer**: Resource models, repositories, collection classes. The AI generates ONLY these files, self-validates that every repository method satisfies an interface declared in Slice 1, then halts for human review.
+3. **Slice 3 — Domain Logic**: Service classes, handlers, processors, state machines. The AI generates ONLY these files, self-validates that every injected dependency uses interfaces from Slice 1 and that state transitions match Phase D declarations, then halts for human review.
+4. **Slice 4 — Integration Layer**: Consumers, observers, plugins, cron jobs, CLI commands. The AI generates ONLY these files, self-validates against the approved call-path (Phase A) and concurrency model (Phase D), then halts for human review.
+5. **Slice 5 — Exposure Layer**: REST endpoints, GraphQL schema/resolvers, admin UI controllers, `webapi.xml`, `schema.graphqls`. The AI generates ONLY these files, self-validates against security boundary declarations (ENF-SEC-001), then halts for human review.
+6. **Slice 6 — Configuration & Wiring**: `di.xml`, `events.xml`, `queue_topology.xml`, `system.xml`, `config.xml`, ACL resources. The AI generates ONLY these files, self-validates that every wired class exists from prior slices, then halts for human review.
+
+### Slice Self-Validation Requirement
+At the end of each slice, BEFORE presenting to the human, the AI must produce a brief validation statement:
+- Which approved phase outputs did it check this slice against?
+- Were any deviations found? If yes, describe and justify each.
+- Does every file in this slice reference only types/interfaces that exist in already-approved slices?
+
+### Adaptation
+Not every task requires all 6 slices. The AI must declare which slices apply and why at the start of code generation. For small tasks (1–3 files), slices may be combined — but the AI must justify the combination and still produce the self-validation statement.
+
+### Action
+The AI must NOT:
+- Generate files from multiple dependency layers in a single slice without justification
+- Skip the self-validation statement for any slice
+- Proceed to the next slice before the current slice is approved
+- Generate 30 files in one output and call it "implementation"
+
+Any output that contains files from more than one dependency layer without explicit justification is a constraint violation.
+
+### Rationale
+Generating all implementation files in a single pass is where drift happens. The AI "forgets" what it approved earlier as the context window fills with generated code. Breaking code generation into dependency-ordered slices with per-slice validation catches drift when the surface is 3 files, not 30. This is the same principle that makes Phases A–D effective — small surfaces with gates prevent error accumulation.
+<!-- RULE END: ENF-GATE-006 -->
+
+---
+
+<!-- RULE START: ENF-GATE-007 -->
+## Rule ENF-GATE-007: Test-First Gate — Test Skeletons Before Implementation
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+After all planning phases (A–D) are approved and BEFORE generating any implementation code (Slice 1+), the AI must generate **test skeletons and assertions first**. This is a mandatory gate — implementation code cannot be produced until test skeletons are reviewed and approved.
+
+### Test Skeleton Requirements
+The test skeletons must include:
+
+1. **Unit test classes** for every service, handler, and domain logic class identified in the approved plan
+2. **Test method stubs with assertions** that encode the approved domain invariants from Phase B:
+   - Positive case: valid entity passes validation
+   - Negative case: invalid entity fails at exact boundary
+   - Persistence failure case: repository returns empty/throws
+   - Exception path: unexpected error returns safe default
+3. **State transition tests** (when Phase D was triggered) that assert:
+   - Each legal transition succeeds with correct pre-conditions
+   - Illegal transitions are rejected
+   - Concurrent transition attempts: second actor gets failure (affected rows = 0, exception)
+4. **Integration test structure** for behaviors identified in ENF-SYS-005 as unprovable-by-mocks
+5. **Security boundary tests** for every endpoint:
+   - Unauthorized caller is rejected
+   - Ownership violation returns 403/exception
+   - Valid caller with ownership gets data
+
+### Assertion Specificity
+Test assertions must be specific enough to serve as executable specifications. The following are NOT acceptable test skeletons:
+- `$this->assertTrue($result)` — asserts nothing meaningful
+- `$this->assertNotNull($response)` — proves existence, not correctness
+- Empty test methods with `// TODO` comments
+
+Acceptable: `$this->assertEquals(1, $record->getAttempts())`, `$this->expectException(AuthorizationException::class)`, `$this->assertEquals('released', $reservation->getStatus())`
+
+### Process Flow
+```
+Phase A → ✅ → Phase B → ✅ → Phase C → ✅ → [Phase D → ✅] →
+Test Skeletons → ✅ (human reviews tests) →
+Slice 1 → ✅ → Slice 2 → ✅ → ... → Slice N → ✅
+```
+
+The AI generates implementation code with the explicit instruction to itself: **"make these approved tests pass."**
+
+### Action
+The AI must NOT:
+- Generate implementation code before test skeletons are approved
+- Generate test skeletons that only cover happy paths
+- Skip test generation because "the task is simple"
+- Generate tests and implementation in the same output
+
+Implementation delivered without corresponding pre-approved test skeletons is a constraint violation.
+
+### Rationale
+When tests are generated after implementation, they become an afterthought — the AI writes tests that validate what it already built, not what was approved. Flipping the order to test-first makes it structurally harder for the AI to drift: if a `ReconciliationHandler` doesn't increment attempts, a pre-existing test asserting `$record->getAttempts() === 1` will catch it. This is TDD enforced at the process level, not just as an aspirational principle.
+<!-- RULE END: ENF-GATE-007 -->
 
 ---
 
@@ -354,6 +458,159 @@ Tests that only cover "clearly above" and "clearly below" cases without testing 
 ### Rationale
 Off-by-one errors at boundaries are among the most common bugs in threshold-based logic. Explicit boundary tests catch these before they reach production.
 <!-- RULE END: ENF-POST-005 -->
+
+---
+
+<!-- RULE START: ENF-POST-006 -->
+## Rule ENF-POST-006: Structured Findings Table — Per-File Rule Audit
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+After generating each code slice (per ENF-GATE-006), the AI must produce a **structured findings table** — not a prose checklist. Self-reporting in natural language ("I checked for load(), no results found") is not enforcement; it is unverifiable narrative.
+
+### Required Table Format
+For every file generated in the current slice, the AI must produce a table with these columns:
+
+| File | Rule Checked | Violation Found? | Evidence |
+|------|-------------|-------------------|----------|
+| `Model/ReservationRepository.php` | ENF-PRE-004 (API safety) | No | All injected deps are interfaces; no session/UI deps |
+| `Model/ReservationHandler.php` | ENF-SYS-003 (state atomicity) | No | Uses `UPDATE WHERE status = :old` on line 47 |
+| `Api/ReservationInterface.php` | ENF-POST-003 (interface consistency) | **YES** | `release()` param order differs from implementation |
+
+### Mandatory Checks Per File
+For every file generated, the AI must answer ALL applicable questions:
+
+1. **Interface adherence**: Does this file call any method not declared in its injected interface?
+2. **State transition atomicity**: Does every state transition use one of the declared atomicity strategies from ENF-SYS-003 (CAS, pessimistic lock, idempotent upsert, optimistic lock, unique constraint, event sourcing)?
+3. **Ownership enforcement**: Does every API endpoint enforce ownership before data access (per ENF-SEC-001)?
+4. **Dependency safety**: Are all injected dependencies safe in all execution contexts (per ENF-PRE-004)?
+5. **Domain invariant compliance**: Does validation logic use persistence verification where Phase B declared it as required (per ENF-PRE-002)?
+6. **Approved plan alignment**: Does this file's behavior match what was approved in Phases A–D?
+
+### The "I Cannot Verify" Rule
+If the answer to any check is **"I cannot verify"** — because the source is unavailable, the behavior depends on runtime state the AI cannot inspect, or the check requires information outside the current context — the AI must:
+
+1. State "I cannot verify" explicitly in the Evidence column
+2. **Halt and flag** the unverifiable item for human review
+3. NOT proceed to the next slice until the human addresses the flag
+
+Assuming compliance when verification is impossible is a constraint violation. The AI must admit uncertainty rather than assume correctness.
+
+### Action
+Any slice delivered without a structured findings table is a constraint violation. Any findings table that contains only "No" entries without specific evidence is suspicious and the AI must re-examine. A table where every row says "No violation — code looks correct" is not an audit; it is rubber-stamping.
+
+### Rationale
+Post-generation checks in prose are declarative self-reporting — the AI says "I checked" and you trust it. A structured table with per-file, per-rule evidence converts self-reporting into an auditable artifact. The "I cannot verify" escape hatch forces the AI to admit its limits rather than paper over gaps with confident prose.
+<!-- RULE END: ENF-POST-006 -->
+
+---
+
+<!-- RULE START: ENF-POST-007 -->
+## Rule ENF-POST-007: Static Analysis Gate — Tool Verification Required
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+AI-generated code must be validated by static analysis tools before implementation is considered complete. The AI's own reasoning is necessary but **not sufficient** — tools catch errors that reasoning misses.
+
+### Required Tools (PHP / Magento 2)
+The following tools must be run against all generated PHP files:
+
+1. **PHPStan (level 8 minimum)**: Catches type errors, method-not-found on interfaces, incorrect return types, undefined variables, and wrong argument counts. PHPStan at level 8 would catch errors like calling `getStore()` on `OrderInterface` (method not found on interface type).
+2. **PHPMD (PHP Mess Detector)**: Flags duplicated logic, excessive complexity, unused parameters, and god classes. Would catch duplicated ownership logic across resolvers.
+3. **Magento Coding Standard (PHPCS)**: Catches missing `@api` annotations, direct `ObjectManager` usage, session dependencies in service classes, and other Magento-specific anti-patterns.
+
+### Optional Custom Rules
+When the project includes custom PHPStan rules or PHPCS sniffs, those must also pass. Examples of high-value custom rules:
+- Fail if any class injects a concrete model class instead of an interface
+- Fail if any repository method uses `load()` instead of `getById()`/`getList()`
+- Fail if any plugin targets a concrete class when the interface is available
+
+### Execution Requirement
+The AI must:
+1. Run the static analysis tools (or request the human to run them)
+2. Paste the tool output inline in the conversation
+3. Address every error reported — either fix it or justify why it is a false positive
+4. Re-run until zero errors remain (or all remaining are documented false positives)
+
+### Halt Condition
+Any PHPStan error at level 8 is a **halt condition**. The AI cannot approve its own code or mark a slice as complete while PHPStan errors exist.
+
+### When Tools Are Not Available
+If static analysis tools are not installed or cannot be run in the current environment:
+1. The AI must state this explicitly: "Static analysis tools are not available in this environment."
+2. The AI must still perform **manual static analysis reasoning** — walk through each generated file and check for the categories of errors these tools would catch (type errors, method-not-found, unused parameters, coding standard violations).
+3. The implementation must be flagged as: "**Pending static analysis validation** — manual review performed but tool confirmation required before production deployment."
+
+### Action
+Implementation marked as complete without static analysis validation (tool or manual + flag) is a constraint violation. The AI must not claim code is production-ready if it has not been validated by tools.
+
+### Rationale
+The AI reasoning about its own code is self-grading — it produces the code and then judges it correct. Static analysis tools are an independent verifier with no reasoning bias. PHPStan at level 8 catches entire categories of bugs (wrong types, missing methods, interface violations) that the AI consistently misses because it "knows what it meant." Running tools before human review means the human reviews code that has already passed a mechanical correctness check.
+<!-- RULE END: ENF-POST-007 -->
+
+---
+
+<!-- RULE START: ENF-POST-008 -->
+## Rule ENF-POST-008: Operational Proof Trace — Config-to-Enforcement Path
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+For every operational claim made in Phase D or declared in ENF-OPS-001/ENF-OPS-002 (retry logic, dead-letter queue, escalation, backoff, max retries, idempotency), the AI must produce a **proof trace** — not a statement that "this is implemented," but the exact code path from configuration read to runtime enforcement.
+
+### Proof Trace Format
+For each operational claim, the AI must trace:
+
+```
+Claim: "Failed messages retry 3 times before DLQ"
+Proof trace:
+  1. Config declaration: system.xml path "section/group/max_retries", default = 3
+  2. Config read: Config\RetryConfig::getMaxRetries() reads from ScopeConfigInterface
+  3. Injection: RetryConfig injected into ConsumerHandler via di.xml
+  4. Enforcement: ConsumerHandler::process() line 52:
+     if ($message->getDeliveryCount() >= $this->retryConfig->getMaxRetries()) {
+         $this->deadLetterPublisher->publish($message);
+         return;
+     }
+  5. DLQ publish: DeadLetterPublisher::publish() writes to 'module.dlq' exchange
+  6. DLQ consumer: queue_consumer.xml declares consumer for 'module.dlq'
+  Status: PROVEN — complete path from config to enforcement
+```
+
+### Broken Trace Detection
+If at any point the trace is broken — a config value is declared but never read, a config is read but the value is never used in a conditional, a DLQ is referenced but no consumer exists — the trace status must be:
+
+```
+  Status: BROKEN at step 3 — Config\RetryConfig is never injected into any consumer
+  Action: Implementation is INCOMPLETE. The retry claim is unproven.
+```
+
+### Required Traces
+The AI must produce proof traces for ALL of the following when they appear in the implementation:
+
+1. **Retry logic**: Config declaration → config read → retry count check → enforcement action
+2. **Dead-letter queue**: DLQ exchange declaration → DLQ binding → DLQ consumer → escalation action
+3. **Backoff/delay**: Config declaration → delay calculation → sleep/reschedule mechanism
+4. **Max attempts**: Config declaration → attempt counter increment → max check → halt action
+5. **Escalation**: Trigger condition → notification mechanism → recipient configuration
+6. **Idempotency**: Unique key declaration → duplicate check mechanism → skip/merge action
+
+### Action
+Any operational claim without a complete proof trace is **unproven**. Unproven claims must be either:
+- Completed (fix the broken trace by implementing the missing link)
+- Downgraded ("this claim is not yet implemented")
+- Removed from the implementation description
+
+Delivering code where operational claims are declared in design but have broken traces in implementation is a constraint violation.
+
+### Rationale
+The audit pattern that exposed this gap: the plan said "max_retries config exists" — and it did — but nothing read it. The config was declared, the constant was defined, and the implementation looked complete on the surface. But the actual code path from `Config::getMaxRetries()` to the line that enforces it was broken. A proof trace forces the AI to find its own dead code before the human does. It converts "this is implemented" from an assertion into a verifiable chain.
+<!-- RULE END: ENF-POST-008 -->
 
 ---
 
