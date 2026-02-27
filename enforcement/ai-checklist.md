@@ -71,5 +71,6 @@ Before writing any code, verify:
 - [ ] Algorithm complexity is appropriate for the use case (Big O)
 - [ ] Dependencies are injected, not instantiated (Dependency Inversion)
 - [ ] Tests are planned or implemented
+- [ ] **Phased Implementation Protocol completed** — if the task involves plugins, observers, validation, or entity retrieval, all three phases (A: call-path, B: domain invariant, C: seam justification) must be individually presented and approved before code generation begins. See `ENF-GATE-001`–`004` in [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md).
 
 **Core philosophy**: Write code once in the right place, make it reusable, keep it simple, and design for extension rather than modification.

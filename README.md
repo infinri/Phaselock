@@ -31,7 +31,7 @@ ai-workflow/
 ├── CONTRIBUTING.md      # How to add rules
 │
 ├── rules/               # Universal coding principles (DRY, SOLID, KISS)
-├── enforcement/         # AI behavior and code generation standards
+├── enforcement/         # AI behavior, phased gate protocol, code generation standards
 ├── prompts/             # Prompt engineering guidelines
 │
 └── bible/               # Domain-specific technical rules

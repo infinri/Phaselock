@@ -101,6 +101,97 @@ Dependencies that assume UI context cause fatal errors or undefined behavior in 
 
 ---
 
+## Block 2 — Phased Implementation Protocol
+
+<!-- RULE START: ENF-GATE-001 -->
+## Rule ENF-GATE-001: Phase A — Call-Path Declaration Gate
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+When a code-generation task involves plugins, observers, or event listeners, the AI must begin with **Phase A only**:
+
+1. Produce the call-path declaration required by ENF-PRE-001
+2. Present it to the user as the **sole output** of this phase
+3. **Halt and wait for explicit human review/approval** before proceeding
+
+### Action
+The AI must not produce domain invariant analysis, seam justification, or any implementation code in the same output as the call-path declaration. Combining Phase A with any subsequent phase is a constraint violation.
+
+### Rationale
+Forcing a single-phase output prevents the AI from front-loading all reasoning in one pass, which collapses review into a rubber-stamp exercise and masks errors in call-path analysis.
+<!-- RULE END: ENF-GATE-001 -->
+
+---
+
+<!-- RULE START: ENF-GATE-002 -->
+## Rule ENF-GATE-002: Phase B — Domain Invariant Declaration Gate
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+After receiving human approval of Phase A, the AI must proceed to **Phase B only**:
+
+1. Produce the domain invariant declaration required by ENF-PRE-002
+2. Present it to the user as the **sole output** of this phase
+3. **Halt and wait for explicit human review/approval** before proceeding
+
+### Action
+The AI must not produce seam justification or any implementation code in the same output as the domain invariant declaration. Combining Phase B with any subsequent phase is a constraint violation.
+
+### Rationale
+Domain invariant analysis depends on a reviewed call-path. Presenting it separately ensures the invariant is evaluated against the approved call-path, not a provisional one.
+<!-- RULE END: ENF-GATE-002 -->
+
+---
+
+<!-- RULE START: ENF-GATE-003 -->
+## Rule ENF-GATE-003: Phase C — Seam Justification Gate
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+After receiving human approval of Phase B, the AI must proceed to **Phase C only**:
+
+1. Produce the plugin seam justification required by ENF-PRE-003 and the API safety check required by ENF-PRE-004
+2. Present them to the user as the **sole output** of this phase
+3. **Halt and wait for explicit human review/approval** before proceeding to code generation
+
+### Action
+The AI must not produce any implementation code in the same output as the seam justification. Combining Phase C with implementation is a constraint violation.
+
+### Rationale
+Seam justification depends on approved call-paths and domain invariants. Presenting it separately ensures timing and state dependencies are evaluated against the approved analysis chain, not assumptions.
+<!-- RULE END: ENF-GATE-003 -->
+
+---
+
+<!-- RULE START: ENF-GATE-004 -->
+## Rule ENF-GATE-004: Anti-Collapse — No Phase Combination or Skipping
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+The AI must never:
+
+- Combine two or more phases (A, B, C) into a single output
+- Skip a phase because it appears trivial or obvious
+- Produce implementation code before all three phases have been individually presented and approved
+- Infer approval (e.g., "since the call-path is straightforward, I'll proceed to code")
+
+### Action
+Any output that contains content from multiple phases, or that contains implementation code before all phases are approved, is a constraint violation. The AI must revise and re-present the current phase only.
+
+### Rationale
+Without an explicit anti-collapse rule, the AI's generative behavior will optimize for output completeness over review quality. This rule is the structural enforcement that prevents regression to single-pass code generation.
+<!-- RULE END: ENF-GATE-004 -->
+
+---
+
 ## Block 3 — Post-Generation Verification
 
 <!-- RULE START: ENF-POST-001 -->

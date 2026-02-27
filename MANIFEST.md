@@ -19,7 +19,7 @@ These apply to any code task regardless of domain:
 
 - [rules/CORE_PRINCIPLES.md](rules/CORE_PRINCIPLES.md) — DRY, SOLID, KISS, Composition
 - [enforcement/ai-checklist.md](enforcement/ai-checklist.md) — Pre-implementation checklist
-- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory reasoning constraints (pre-implementation, post-generation, context retrieval)
+- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory reasoning constraints: pre-implementation (`ENF-PRE-001`–`004`), **phased gate protocol** (`ENF-GATE-001`–`004`), post-generation (`ENF-POST-001`–`005`), context retrieval (`ENF-CTX-001`–`003`)
 
 ## Maintenance notes
 

@@ -21,7 +21,12 @@ metadata:
 1. **Identify the task domain** from the navigation table below
 2. **Read only the relevant documents** — do not load the entire knowledge base
 3. **State which documents were consulted** before proposing any solution
-4. **If guidance is missing or ambiguous**: state it explicitly, ask for clarification, propose a conservative default. Silent guessing is never allowed.
+4. **If the task involves plugins, observers, validation, or entity retrieval**: follow the **Phased Implementation Protocol** (`ENF-GATE-001`–`004` in [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md)):
+   - **Phase A** → Call-path declaration ONLY → halt for review
+   - **Phase B** → Domain invariant declaration ONLY → halt for review
+   - **Phase C** → Seam justification ONLY → halt for review
+   - **Only after all phases approved** → proceed to code
+5. **If guidance is missing or ambiguous**: state it explicitly, ask for clarification, propose a conservative default. Silent guessing is never allowed.
 
 ## Task → document navigation
 
