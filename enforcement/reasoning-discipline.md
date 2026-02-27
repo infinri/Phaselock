@@ -470,14 +470,33 @@ Off-by-one errors at boundaries are among the most common bugs in threshold-base
 ### Statement
 After generating each code slice (per ENF-GATE-006), the AI must produce a **structured findings table** — not a prose checklist. Self-reporting in natural language ("I checked for load(), no results found") is not enforcement; it is unverifiable narrative.
 
-### Required Table Format
-For every file generated in the current slice, the AI must produce a table with these columns:
+### Evidence Standard — Quote the Code, Not Your Belief
+**"I believe it complies" is not acceptable.** Evidence must be a direct quote from the generated code — the specific line(s) that satisfy or violate the rule. If you cannot quote a satisfying line, the rule is violated. Halt, fix, re-verify before continuing.
 
-| File | Rule Checked | Violation Found? | Evidence |
-|------|-------------|-------------------|----------|
-| `Model/ReservationRepository.php` | ENF-PRE-004 (API safety) | No | All injected deps are interfaces; no session/UI deps |
-| `Model/ReservationHandler.php` | ENF-SYS-003 (state atomicity) | No | Uses `UPDATE WHERE status = :old` on line 47 |
-| `Api/ReservationInterface.php` | ENF-POST-003 (interface consistency) | **YES** | `release()` param order differs from implementation |
+This is the difference between a checklist and an audit:
+- **Checklist** (not acceptable): "All injected deps are interfaces; no session/UI deps"
+- **Audit** (required): `__construct(ReservationRepositoryInterface $reservationRepository, LoggerInterface $logger)` — line 23. All constructor params are interfaces.
+
+### Required Table Format
+For every file generated in the current slice, the AI must first **state which ENF/FW rules apply to that file specifically**, then produce a table with these columns:
+
+| File | Rule | Violation? | Quoted Evidence |
+|------|------|------------|-----------------|
+| `Model/ReservationRepository.php` | ENF-PRE-004 (API safety) | No | `__construct(ResourceConnection $resource, LoggerInterface $logger)` — line 15. No session/UI deps. |
+| `Model/ReservationHandler.php` | ENF-SYS-003 (state atomicity) | No | `$affected = $connection->update($table, ['status' => self::STATUS_RELEASED], ['status = ?' => self::STATUS_RESERVED, 'item_id = ?' => $itemId]);` — line 47. CAS pattern, second actor gets affected=0. |
+| `Model/ReservationHandler.php` | ENF-SYS-003 (contention) | No | `if ($affected === 0) { throw new AlreadyReleasedException(...); }` — line 49. Graceful failure on contention. |
+| `Api/ReservationInterface.php` | ENF-POST-003 (interface match) | **YES** | `release(int $itemId, string $sku)` in interface vs `release(string $sku, int $itemId)` in implementation — param order mismatch. |
+
+### Per-File Rule Identification
+Before filling the table, the AI must list **which rules apply to each file**. Not every rule applies to every file. The AI must declare the applicable subset and justify why other rules do not apply. Skipping a rule without justification is a constraint violation.
+
+Example:
+```
+File: Model/ReservationHandler.php
+Applicable rules: ENF-PRE-004 (has constructor), ENF-SYS-003 (has state transition),
+                  ENF-PRE-002 (has validation logic), ENF-POST-003 (implements interface)
+Not applicable:   ENF-SEC-001 (not an endpoint), ENF-SYS-002 (no temporal truth check)
+```
 
 ### Mandatory Checks Per File
 For every file generated, the AI must answer ALL applicable questions:
@@ -499,7 +518,7 @@ If the answer to any check is **"I cannot verify"** — because the source is un
 Assuming compliance when verification is impossible is a constraint violation. The AI must admit uncertainty rather than assume correctness.
 
 ### Action
-Any slice delivered without a structured findings table is a constraint violation. Any findings table that contains only "No" entries without specific evidence is suspicious and the AI must re-examine. A table where every row says "No violation — code looks correct" is not an audit; it is rubber-stamping.
+Any slice delivered without a structured findings table is a constraint violation. Each file must have its own row — no grouping multiple files into a single entry. Evidence must quote the most **behaviorally relevant** code, not the most obviously compliant line. A table where every row shows no violation must include a sentence explaining **why this slice was low-risk**, or it is treated as rubber-stamping and the AI must re-examine. After fixing any violation, the **full slice table must be regenerated from scratch** — patching a single row while leaving stale evidence in other rows is not acceptable.
 
 ### Rationale
 Post-generation checks in prose are declarative self-reporting — the AI says "I checked" and you trust it. A structured table with per-file, per-rule evidence converts self-reporting into an auditable artifact. The "I cannot verify" escape hatch forces the AI to admit its limits rather than paper over gaps with confident prose.
