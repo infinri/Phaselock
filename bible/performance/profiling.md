@@ -71,3 +71,27 @@ Evaluate whether data is needed immediately or can be deferred.
 ### Rationale
 Eager loading of unused resources wastes memory and CPU cycles. Lazy loading improves startup time and reduces unnecessary work.
 <!-- RULE END: PERF-LAZY-001 -->
+
+---
+
+<!-- RULE START: PERF-QBUDGET-001 -->
+## Rule PERF-QBUDGET-001: Query Budget Declaration Gate
+
+**Domain**: Performance  
+**Severity**: Critical
+
+### Statement
+When requirements specify a DB query budget (e.g., "must not introduce more than N additional DB queries per cycle"), the AI must produce a **Query Budget Plan** before writing any implementation code. The plan must include:
+
+1. **Expected query count**: List each DB query the implementation will execute, with the exact repository method or resource model call that triggers it.
+2. **Worst-case analysis**: Repository `getList()` calls may trigger multiple underlying queries (entity query, count query, extension attribute loads, EAV attribute loads). The AI must not assume a single repository call = a single DB query. If uncertain about internal query behavior, state the uncertainty and design to worst case.
+3. **Caching strategy**: If the query budget is tight, state whether results will be cached per-request (e.g., instance variable, registry, identity map) and under what invalidation conditions.
+4. **Fallback if budget is exceeded**: If the standard service contract approach cannot meet the budget, propose a specialized resource model query that retrieves only the needed field(s) — and justify the trade-off explicitly.
+5. **Measurement plan**: State how query count will be verified (e.g., MySQL general log, `db_query` profiler, integration test with query counter).
+
+### Action
+If a query budget is in the requirements and the AI cannot produce a concrete plan that provably meets it, the AI must halt and declare the gap. Optimistic statements like "this is 1 query" without verifying the repository's internal behavior are constraint violations.
+
+### Rationale
+Repository and service contract abstractions hide query complexity. A single `getList()` call can generate 2–5+ queries depending on the entity type, collection implementation, and loaded extension attributes. Assuming query behavior without verification is the primary source of performance budget violations in Magento custom modules.
+<!-- RULE END: PERF-QBUDGET-001 -->

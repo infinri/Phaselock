@@ -21,12 +21,14 @@ metadata:
 1. **Identify the task domain** from the navigation table below
 2. **Read only the relevant documents** — do not load the entire knowledge base
 3. **State which documents were consulted** before proposing any solution
-4. **If the task involves plugins, observers, validation, or entity retrieval**: follow the **Phased Implementation Protocol** (`ENF-GATE-001`–`004` in [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md)):
+4. **If the task involves plugins, observers, validation, or entity retrieval**: follow the **Phased Implementation Protocol** (`ENF-GATE-001`–`005` in [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md)):
    - **Phase A** → Call-path declaration ONLY → halt for review
    - **Phase B** → Domain invariant declaration ONLY → halt for review
    - **Phase C** → Seam justification ONLY → halt for review
+   - **Phase D** → Failure & concurrency modeling ONLY (when triggered) → halt for review
    - **Only after all phases approved** → proceed to code
-5. **If guidance is missing or ambiguous**: state it explicitly, ask for clarification, propose a conservative default. Silent guessing is never allowed.
+5. **If the task involves concurrency, async processing, state transitions, or multi-actor writes**: Phase D is mandatory. See trigger conditions in [enforcement/system-dynamics.md](enforcement/system-dynamics.md).
+6. **If guidance is missing or ambiguous**: state it explicitly, ask for clarification, propose a conservative default. Silent guessing is never allowed.
 
 ## Task → document navigation
 
@@ -36,7 +38,7 @@ Read the documents listed for each matching task type. Start with [rules/CORE_PR
 
 When introducing modules, changing system boundaries, or modifying core flows:
 
-- [bible/architecture/principles.md](bible/architecture/principles.md) — Code organization, extension points, dependency injection, named constants (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`, `ARCH-CONST-001`)
+- [bible/architecture/principles.md](bible/architecture/principles.md) — Code organization, extension points, dependency injection, named constants, single source of truth for multi-channel data (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`, `ARCH-CONST-001`, `ARCH-SSOT-001`)
 
 ### Database / SQL
 
@@ -55,13 +57,14 @@ When writing PHP code, handling errors, or enforcing type safety:
 
 When optimizing slow paths, addressing resource issues, or introducing caching:
 
-- [bible/performance/profiling.md](bible/performance/profiling.md) — Algorithm complexity, optimization order, lazy loading (`PERF-BIGO-001`, `PERF-OPT-001`, `PERF-LAZY-001`)
+- [bible/performance/profiling.md](bible/performance/profiling.md) — Algorithm complexity, optimization order, lazy loading, query budget declaration (`PERF-BIGO-001`, `PERF-OPT-001`, `PERF-LAZY-001`, `PERF-QBUDGET-001`)
 
 ### Frameworks / Magento 2
 
 When writing plugins, observers, validation, or entity retrieval in Magento 2:
 
-- [bible/frameworks/magento/implementation-constraints.md](bible/frameworks/magento/implementation-constraints.md) — Persistence-backed validation, repository-only retrieval, quote state timing, plugin targeting (`FW-M2-001`, `FW-M2-002`, `FW-M2-003`, `FW-M2-004`)
+- [bible/frameworks/magento/implementation-constraints.md](bible/frameworks/magento/implementation-constraints.md) — Persistence-backed validation, repository-only retrieval, quote state timing, plugin targeting, totals collector idempotency, CartTotalRepository stale-read behavior (`FW-M2-001`, `FW-M2-002`, `FW-M2-003`, `FW-M2-004`, `FW-M2-005`, `FW-M2-006`)
+- [bible/frameworks/magento/runtime-constraints.md](bible/frameworks/magento/runtime-constraints.md) — MSI salability authority, order state machine, config patterns, endpoint authorization, queue infrastructure, multi-website stock (`FW-M2-RT-001`, `FW-M2-RT-002`, `FW-M2-RT-003`, `FW-M2-RT-004`, `FW-M2-RT-005`, `FW-M2-RT-006`)
 
 ### Testing
 
@@ -69,12 +72,33 @@ When adding tests, refactoring with risk, or addressing regressions:
 
 - [bible/testing/unit-testing.md](bible/testing/unit-testing.md) — TDD, test isolation, integration testing (`TEST-TDD-001`, `TEST-ISO-001`, `TEST-INT-001`)
 
+### System dynamics & concurrency
+
+When building features with concurrent actors, message queues, state machines, async processing, or multi-website behavior:
+
+- [enforcement/system-dynamics.md](enforcement/system-dynamics.md) — Concurrency simulation, temporal truth sources, state transition atomicity, policy vs mechanism separation, integration reality check (`ENF-SYS-001`, `ENF-SYS-002`, `ENF-SYS-003`, `ENF-SYS-004`, `ENF-SYS-005`)
+
+### Security & access control
+
+When exposing endpoints (REST, GraphQL, admin, storefront) or handling data access:
+
+- [enforcement/security-boundaries.md](enforcement/security-boundaries.md) — Access boundary declarations, data exposure minimization (`ENF-SEC-001`, `ENF-SEC-002`)
+
+### Operational claims & queue infrastructure
+
+When making performance/throughput claims or configuring message queues:
+
+- [enforcement/operational-claims.md](enforcement/operational-claims.md) — Operational claim validation, queue configuration completeness (`ENF-OPS-001`, `ENF-OPS-002`)
+
 ### AI behavior & code generation
 
 When reviewing AI-generated code or understanding assistant behavior expectations:
 
 - [enforcement/ai-checklist.md](enforcement/ai-checklist.md) — Pre-implementation checklist, minimal code generation rules
-- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory pre-implementation reasoning, post-generation verification, context retrieval discipline (`ENF-PRE-001`–`004`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
+- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory pre-implementation reasoning, post-generation verification, context retrieval discipline, Phase D hard gate (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`005`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
+- [enforcement/system-dynamics.md](enforcement/system-dynamics.md) — System dynamics enforcement, Phase D protocol (`ENF-SYS-001`–`005`)
+- [enforcement/security-boundaries.md](enforcement/security-boundaries.md) — Security boundary enforcement (`ENF-SEC-001`–`002`)
+- [enforcement/operational-claims.md](enforcement/operational-claims.md) — Operational claim enforcement (`ENF-OPS-001`–`002`)
 - [prompts/cascade-best-practices.md](prompts/cascade-best-practices.md) — Prompt engineering guidelines
 
 ## Rule format

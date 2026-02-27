@@ -192,6 +192,49 @@ Without an explicit anti-collapse rule, the AI's generative behavior will optimi
 
 ---
 
+<!-- RULE START: ENF-GATE-005 -->
+## Rule ENF-GATE-005: Phase D — System Dynamics Gate (Hard Block)
+
+**Domain**: AI Enforcement  
+**Severity**: Critical
+
+### Statement
+When a task triggers any ENF-SYS-* rule (see trigger conditions in [system-dynamics.md](system-dynamics.md)), the AI must complete **Phase D** before producing implementation code:
+
+1. Produce the system dynamics analysis required by the triggered ENF-SYS-* rules
+2. Present Phase D as the **sole output** of this phase
+3. **Halt and wait for explicit human review/approval** before proceeding to implementation
+
+Phase D is a **hard blocking gate**, identical in enforcement to Phases A, B, and C.
+
+### Action
+The AI must NOT:
+- Produce implementation code in the same output as Phase D analysis
+- Skip Phase D because the concurrency model "seems straightforward"
+- Infer Phase D approval (e.g., "the race conditions are simple, so I'll proceed")
+- Combine Phase D with any other phase
+- Proceed to implementation if any ENF-SYS-* declaration is incomplete or contains gaps
+
+If the AI produces implementation code before Phase D is individually presented and approved, it is a constraint violation. The AI must revise and re-present Phase D only.
+
+### Hard Gate Checklist
+Before the AI may proceed past Phase D, ALL of the following must be true:
+
+- [ ] Concurrency model complete (ENF-SYS-001) — all actors and race windows identified
+- [ ] Temporal truth sources declared (ENF-SYS-002) — no re-evaluation of upstream authorities
+- [ ] State transitions defined with atomicity mechanism (ENF-SYS-003) — chosen strategy declared and justified
+- [ ] Policy vs mechanism classified (ENF-SYS-004) — configurable items identified
+- [ ] Integration reality check complete (ENF-SYS-005) — unprovable-by-mocks behaviors listed
+- [ ] Human has explicitly approved Phase D output
+
+If any item is incomplete, the AI must declare the gap and halt.
+
+### Rationale
+Without a formal blocking gate, system dynamics analysis degenerates into prose that the AI writes and then ignores. The existing gates (ENF-GATE-001 through 004) work because they are hard blocks — the AI cannot proceed without approval. Phase D must have identical enforcement weight, or the AI will write a concurrency section, produce some words about race windows, and then proceed without truly enforcing atomic design.
+<!-- RULE END: ENF-GATE-005 -->
+
+---
+
 ## Block 3 — Post-Generation Verification
 
 <!-- RULE START: ENF-POST-001 -->
@@ -260,10 +303,10 @@ Interface-implementation mismatches cause subtle runtime errors that are difficu
 ---
 
 <!-- RULE START: ENF-POST-004 -->
-## Rule ENF-POST-004: Unit Tests Must Cover Domain Invariant
+## Rule ENF-POST-004: Unit Tests Must Cover Domain Invariant — Hard Gate
 
 **Domain**: AI Enforcement  
-**Severity**: High
+**Severity**: Critical
 
 ### Statement
 Every validation method must have tests that cover:
@@ -272,12 +315,22 @@ Every validation method must have tests that cover:
 - The negative case at the boundary (invalid entity fails at the exact threshold)
 - The persistence failure case (DB unavailable, entity not found, rule inactive)
 - The exception path (unexpected error is caught, logged, and returns a safe default)
+- The **idempotency case** (for totals collectors: calling collect() twice produces identical results; calling collect() after eligibility changes clears prior values)
+- The **state reversal case** (conditions that were true become false; all owned state is cleaned up)
+
+### Hard Gate
+The AI must **refuse to mark implementation as complete** if the declared domain invariants from Phase B do not have corresponding test coverage. Specifically:
+
+1. For each invariant declared in Phase B, at least one test must exercise it.
+2. For each persistence-based check, a test must mock the repository to return failure/empty and verify the safe default.
+3. For each threshold, boundary tests per ENF-POST-005 must exist.
+4. If tests are missing, the AI must list which invariants lack coverage and produce the tests before finalizing.
 
 ### Action
-Tests that only cover format or structural checks on a validator declared as persistence-based are constraint violations.
+Tests that only cover format or structural checks on a validator declared as persistence-based are constraint violations. Implementation delivery without matching test coverage for every declared invariant is a constraint violation.
 
 ### Rationale
-Happy-path-only tests create false confidence. Validation methods are critical control points that must be tested against the full range of failure modes.
+Happy-path-only tests create false confidence. Validation methods are critical control points that must be tested against the full range of failure modes. Without a hard gate tying tests to declared invariants, the AI will consistently under-test edge cases.
 <!-- RULE END: ENF-POST-004 -->
 
 ---
@@ -329,7 +382,7 @@ Passive absorption of large context windows leads to hallucinated connections an
 ---
 
 <!-- RULE START: ENF-CTX-002 -->
-## Rule ENF-CTX-002: Missing Context Must Halt Implementation
+## Rule ENF-CTX-002: Missing Context Must Halt Implementation — Verification Checklist
 
 **Domain**: AI Enforcement  
 **Severity**: Critical
@@ -337,11 +390,23 @@ Passive absorption of large context windows leads to hallucinated connections an
 ### Statement
 The AI must not fill missing context with training data assumptions. If the call-path for a feature is not in the digest, the AI must say so and request the information before proceeding.
 
+### Verification Checklist
+Before asserting any of the following in a call-path or architecture declaration, the AI must have **read the actual source file** from the codebase (vendor or app) or found the fact in `.ai-context` data. If neither is available, the assertion must be flagged as **unverified** and the AI must request confirmation:
+
+1. **"Class X calls collectTotals()"** — read the source of class X or find it in `call_graph.json`.
+2. **"GraphQL field Y is resolved by class Z"** — read `schema.graphqls` or find it in `call_graph.json` entry points.
+3. **"Repository method returns N queries"** — read the repository implementation or flag as unverified.
+4. **"Extension attribute A is populated by class B"** — read class B's source or flag as unverified.
+5. **"REST endpoint returns field X from source Y"** — read the service contract implementation (e.g., `CartTotalRepository::get()`) or flag as unverified.
+6. **"Area code check prevents execution in context C"** — verify `App\State` is injectable in the target class's execution context.
+
+Each assertion in the call-path declaration must be tagged: `[verified: source_file]` or `[unverified: needs confirmation]`.
+
 ### Action
-Silent assumptions about execution flow, entity relationships, or API safety are constraint violations. The AI must halt and declare the gap.
+Silent assumptions about execution flow, entity relationships, or API safety are constraint violations. The AI must halt and declare the gap. Confident prose that reads as fact but is actually a training-data guess is the most dangerous form of this violation.
 
 ### Rationale
-Training data assumptions are the primary source of plausible-looking but incorrect implementations. Halting on missing context is safer than generating code based on guesses.
+Training data assumptions are the primary source of plausible-looking but incorrect implementations. Halting on missing context is safer than generating code based on guesses. The verification checklist converts a subjective rule ("don't assume") into an auditable requirement ("show me the source").
 <!-- RULE END: ENF-CTX-002 -->
 
 ---

@@ -91,3 +91,26 @@ Before hardcoding any threshold, ID, or string literal that encodes business log
 ### Rationale
 Magic values obscure intent, make maintenance error-prone, and create implicit dependencies between business rules and code. Named constants with documented origins ensure traceability and safe modification.
 <!-- RULE END: ARCH-CONST-001 -->
+
+---
+
+<!-- RULE START: ARCH-SSOT-001 -->
+## Rule ARCH-SSOT-001: Single Source of Truth for Derived Views
+
+**Domain**: Architecture  
+**Severity**: Critical
+
+### Statement
+When a feature produces data that is visible through multiple channels (e.g., REST API total segments, GraphQL response fields, frontend template blocks, quote extension attributes), the implementation must:
+
+1. **Choose one canonical storage location** for the computed value (e.g., the `Total` object's amount for the collector's code, OR an address extension attribute — not both independently).
+2. **Derive all secondary views from the canonical source** during each computation cycle. Secondary views must never be persisted or populated independently of the canonical source.
+3. **State the canonical source explicitly** in the call-path declaration before implementation begins.
+4. **Never write the same value to two locations independently** — if REST needs a total segment and GraphQL needs an extension attribute, one must be derived from the other, or both must be set from a single computed result in the same code path.
+
+### Action
+Before implementing any feature with multi-channel visibility, the AI must declare: "Canonical source: [location]. REST reads from [X]. GraphQL reads from [Y]. Frontend reads from [Z]. All derive from [canonical source] via [mechanism]." If the AI cannot trace a single source to all views, the design has a consistency bug.
+
+### Rationale
+Independent population of the same value in multiple locations creates: (a) stale data when one location is updated but another isn't, (b) inconsistent behavior between REST and GraphQL, (c) cleanup/reversal bugs where one location is cleared but the other retains stale data. This is the architectural root cause of "works in REST but not in GraphQL" bugs.
+<!-- RULE END: ARCH-SSOT-001 -->

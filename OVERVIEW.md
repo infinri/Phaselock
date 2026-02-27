@@ -34,7 +34,10 @@ Contains:
 
 Current files:
 - `ai-checklist.md` — Code generation standards, pre-implementation checklist
-- `reasoning-discipline.md` — Mandatory pre-implementation reasoning, post-generation verification, context retrieval discipline (`ENF-PRE-001`–`004`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
+- `reasoning-discipline.md` — Mandatory pre-implementation reasoning, phased gate protocol, post-generation verification, context retrieval discipline (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`005`, `ENF-POST-001`–`005`, `ENF-CTX-001`–`003`)
+- `system-dynamics.md` — Concurrency simulation, temporal truth sources, state transition atomicity, policy vs mechanism separation, integration reality check (`ENF-SYS-001`–`005`), Phase D protocol
+- `security-boundaries.md` — Access boundary declarations, data exposure minimization (`ENF-SEC-001`–`002`)
+- `operational-claims.md` — Operational claim validation, queue configuration completeness (`ENF-OPS-001`–`002`)
 
 ---
 
@@ -75,7 +78,7 @@ Contains:
 - Named constants for business rules
 
 Current files:
-- `principles.md` — ARCH-ORG-001, ARCH-EXT-001, ARCH-DI-001, ARCH-CONST-001
+- `principles.md` — ARCH-ORG-001, ARCH-EXT-001, ARCH-DI-001, ARCH-CONST-001, ARCH-SSOT-001
 
 ---
 
@@ -113,7 +116,7 @@ Contains:
 - Lazy loading guidelines
 
 Current files:
-- `profiling.md` — PERF-BIGO-001, PERF-OPT-001, PERF-LAZY-001
+- `profiling.md` — PERF-BIGO-001, PERF-OPT-001, PERF-LAZY-001, PERF-QBUDGET-001
 
 ---
 
@@ -140,7 +143,8 @@ Contains:
 - Plugin targeting rules
 
 Current files:
-- `magento/implementation-constraints.md` — FW-M2-001, FW-M2-002, FW-M2-003, FW-M2-004
+- `magento/implementation-constraints.md` — FW-M2-001, FW-M2-002, FW-M2-003, FW-M2-004, FW-M2-005, FW-M2-006
+- `magento/runtime-constraints.md` — FW-M2-RT-001, FW-M2-RT-002, FW-M2-RT-003, FW-M2-RT-004, FW-M2-RT-005, FW-M2-RT-006
 
 ---
 
@@ -157,12 +161,15 @@ Current files:
 |-----------|--------|-------------|
 | `bible/architecture/` | System design | `ARCH-` |
 | `bible/database/` | SQL / Data | `DB-` |
-| `bible/frameworks/magento/` | Magento 2 | `FW-M2-` |
+| `bible/frameworks/magento/` | Magento 2 | `FW-M2-`, `FW-M2-RT-` |
 | `bible/languages/php/` | PHP | `PHP-` |
 | `bible/performance/` | Performance | `PERF-` |
 | `bible/security/` | Security | `SEC-` |
 | `bible/testing/` | Testing | `TEST-` |
 | `bible/playbooks/` | Workflows | `PLAY-` |
-| `enforcement/` | AI Behavior | — |
+| `enforcement/` | AI Behavior | `ENF-` |
+| `enforcement/` | System Dynamics | `ENF-SYS-` |
+| `enforcement/` | Security | `ENF-SEC-` |
+| `enforcement/` | Operations | `ENF-OPS-` |
 | `prompts/` | Templates | — |
 | `rules/` | Global Principles | — |
