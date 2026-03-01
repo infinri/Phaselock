@@ -1,5 +1,35 @@
 # AI Workflow — Coding Bible
 
+```
+              & &&&&  &&&&&        && &       &&&&&  &&&& &                       
+         &&& &&&&& &&&&  &&&  && &&&&&&  &&&  &&&& &&&&& &&                     
+         & &&     &&&& &&&&&&&& &&&&& &&&&&&&& &&&&     && &                    
+         &   &  & &&& &&&&&&&&&& &&& &&&&&&&&&& &&& &  &   &                    
+          &      &  &&&&&&&&&&& &&&&& &&&&&&&&&&&  &      &                     
+      &    &&  & && &&&&&&&&&& &&&&&&& &&&&&&&&&  && &  &&    &&                
+        &&         &    &&&&&  &&&&&&&  &&&&&    &         &&&                  
+          &&        &    &  &&&&&&&&&&&&&  &    &        &&                     
+     &&&&&    &&     & &   &&&&&&&&&&&&&&&   & &      &     &&&&                
+     &&&&&&&   &&&   &&  &&&&&&&&&&&&&&&&&&&  &&   &&&   &&&&&&&                
+            &  & &     & &&&&&&&&&&&&&&&&&&& &     & &                          
+      &&&&&     &&     &    &&&&&&&&&&&&&    &     &&   & &&&&&                 
+         &&&  &  &&&   &&     &&&&&&&&&     &&   &&&  &  &&&                    
+       & &  && &&&      &&&  & &&&&&&& &  &&&      &&& &&  &&&                  
+       &   &  &   &&      &&&&& &&&&& &&&&&      &&   &  &   &                  
+        &  &&  &&          & &&&&&&&&&&& &          &&  &&  &&                  
+            &&            & & &&&&&&&&& & &            &&                       
+                         && & &&&&&&&&& & &&                                    
+                        &&&   &       &   & &                                   
+                        & &  &&&&   &&&& &&&                                    
+                        &  &&   &        &&&                                    
+                          &&&&& &&&&&  & &&&                                    
+                          &&&&  &     & &&                                      
+                           &   &&&& & & &&                                      
+                            && &&&&&&&& &                                       
+                              &  &&&&&                                          
+                                  &&                                            
+                                                                                                
+```
 A structured knowledge base of **62 enforceable rules** across 14 documents that govern how AI agents generate code in this codebase. Every rule exists because something went wrong without it.
 
 This is an [Agent Skill](https://agentskills.io/) — a portable, open format for extending AI agent capabilities. Compatible with Windsurf Cascade, Claude Code, Cursor, and any skill-compatible agent.
