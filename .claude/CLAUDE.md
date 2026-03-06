@@ -1,6 +1,6 @@
-# AI Workflow — Navigation
+# Phaselock — Navigation
 
-The Coding Bible lives in the ai-workflow skill.
+The Coding Bible lives in the Phaselock skill.
 Never load the entire Bible at task start.
 Load only what the current phase requires.
 
