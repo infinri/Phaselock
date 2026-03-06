@@ -330,8 +330,9 @@ The AI must NOT:
 - Generate test skeletons that only cover happy paths
 - Skip test generation because "the task is simple"
 - Generate tests and implementation in the same output
+- Display test content in the conversation window and treat it as equivalent to writing the file — each declared test file MUST be written via the Write tool, producing a write receipt for each path listed in the plan manifest
 
-Implementation delivered without corresponding pre-approved test skeletons is a constraint violation.
+Implementation delivered without corresponding pre-approved test skeletons is a constraint violation. Test skeletons shown in chat but not written to disk via the Write tool do not satisfy this gate.
 
 ### Rationale
 When tests are generated after implementation, they become an afterthought — the AI writes tests that validate what it already built, not what was approved. Flipping the order to test-first makes it structurally harder for the AI to drift: if a `ReconciliationHandler` doesn't increment attempts, a pre-existing test asserting `$record->getAttempts() === 1` will catch it. This is TDD enforced at the process level, not just as an aspirational principle.
@@ -567,6 +568,9 @@ If static analysis tools are not installed or cannot be run in the current envir
 ### Action
 Implementation marked as complete without static analysis validation (tool or manual + flag) is a constraint violation. The AI must not claim code is production-ready if it has not been validated by tools.
 
+### Pending Tasks Prohibition
+ENF-POST-007 may **never** appear in a "pending tasks" list in plan.md. There is no deferral category for static analysis — it is either completed (tools run, zero errors) or the gate is blocked. If the AI places static analysis in a "pending," "future work," or "post-deployment" section while simultaneously declaring ENF-GATE-FINAL passed, that is a constraint violation. The enforce-final-gate.sh hook will block the plan.md write when this pattern is detected.
+
 ### Rationale
 The AI reasoning about its own code is self-grading — it produces the code and then judges it correct. Static analysis tools are an independent verifier with no reasoning bias. PHPStan at level 8 catches entire categories of bugs (wrong types, missing methods, interface violations) that the AI consistently misses because it "knows what it meant." Running tools before human review means the human reviews code that has already passed a mechanical correctness check.
 <!-- RULE END: ENF-POST-007 -->
@@ -706,3 +710,68 @@ If training data bias is detected in a generated output, the output must be revi
 ### Rationale
 AI models are statistically biased toward deprecated patterns that appear frequently in older codebases. Explicit resistance prevents regression to outdated practices.
 <!-- RULE END: ENF-CTX-003 -->
+
+---
+
+<!-- RULE START: ENF-CTX-004 -->
+## Rule ENF-CTX-004: Context Pressure Limits on Gate Execution
+
+**Domain**: AI Enforcement
+**Severity**: Critical
+
+### Statement
+Context pressure silently degrades verification quality. Output format does not change as context fills — a compressed findings table looks identical to a thorough one. Hard limits are required:
+
+- **At 75% context (HIGH)**: Spawn slice-builder for all remaining implementation slices. The main session continues only for gate reviews, not code generation.
+- **Before ENF-GATE-FINAL**: Context must be below 70%. If context is at HIGH (75%+) or CRITICAL (90%+) when all slices are approved, spawn a fresh session for final gate verification. Pass it only the plan.md path and the list of generated file paths. Do not run ENF-GATE-FINAL in the same session that generated the code if that session is above 70%.
+- **At every ENF-GATE halt point** (Phase A through FINAL): Append the current token metrics block to `{PROJECT_ROOT}/.claude/session-metrics.md` on disk. Format: `## Gate: [gate-name] — [timestamp]\nContext: [N]% ([tokens] tokens)\n`. This data must survive a context restart.
+
+### Action
+Running ENF-GATE-FINAL above 70% context is a constraint violation. The AI must declare the context level before executing any gate check. If token metrics are unavailable or cannot be assessed, assume context is HIGH and spawn a fresh session.
+
+### Rationale
+The LoyaltyRewards audit demonstrated this failure mode: at 93% context, the session missed zero test files on disk and a missing class in schema.graphqls — both in the final slices. The output looked complete. A compressed findings table at 90% context is indistinguishable from a thorough one at 30% context. Mechanical context limits prevent quality degradation from being invisible. Token metrics persisted to disk give the human a post-hoc audit trail even after context compaction destroys the session history.
+<!-- RULE END: ENF-CTX-004 -->
+
+---
+
+<!-- RULE START: ENF-GATE-FINAL -->
+## Rule ENF-GATE-FINAL: Plan-to-Code Completeness Verification
+
+**Domain**: AI Enforcement
+**Severity**: Critical
+
+### Statement
+After all implementation slices are approved, and BEFORE the module is declared complete,
+invoke plan-guardian with the full plan.md and ALL generated file paths.
+The agent produces a COMPLETION MATRIX mapping every capability from Phases A-D
+to the specific file and method implementing it.
+
+### Halt condition
+Any MISSING row = constraint violation. Module is INCOMPLETE.
+Generate missing implementation before delivery.
+'Planned for future iteration' is not acceptable if it was approved in the plan.
+
+### Specific checks
+1. Every state declared in Phase D has at least one code path that transitions INTO it
+   (not just constants — actual assignments). See ENF-SYS-006.
+2. Every operational claim (retry, DLQ, escalation) has a complete proof trace:
+   config declared → config read → enforcement enforced. Broken chain = MISSING.
+3. Every API endpoint declared in Phase A has a corresponding implementation.
+4. Every integration declared in Phase C has a corresponding implementation.
+5. **Filesystem verification**: For every file listed in the plan manifest, confirm it exists on disk. A file described in plan.md that is absent from the filesystem = MISSING. "Written to disk" in plan.md is not evidence of existence.
+6. **Dependency scan**: For every generated PHP file, extract class references (use statements, constructor type-hints). For every generated `.graphqls` file, extract PHP class names from `class:` and `cacheIdentity:` directive values. Verify each referenced custom class exists on disk. A reference to a non-existent class = MISSING. Undeclared dependencies introduced during implementation (not in plan.md) are still caught here — their absence from the manifest does not grant them a pass.
+7. **Context gate**: ENF-GATE-FINAL must not be executed above 70% context. Declare the current context level before running the gate. If context is at HIGH (75%+) or CRITICAL (90%+), spawn a fresh session, pass it only the plan.md and generated file paths, and run the gate there. See ENF-CTX-004.
+
+### Mechanical enforcement
+The enforce-final-gate.sh hook blocks writing plan.md until
+{PROJECT_ROOT}/.claude/gates/gate-final.approved exists.
+
+The hook also scans the content of plan.md being written for any ENF-POST rule or
+static analysis mention marked as pending. Any such pattern blocks the write with:
+"GATE BLOCKED: plan.md contains pending ENF-POST items."
+
+### Invocation
+'Use plan-guardian to verify ALL slices against plan.md'
+Zero MISSING rows → touch {PROJECT_ROOT}/.claude/gates/gate-final.approved → write plan.md
+<!-- RULE END: ENF-GATE-FINAL -->

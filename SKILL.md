@@ -1,5 +1,5 @@
 ---
-name: ai-workflow
+name: phaselock
 description: >
   Provides institutional coding knowledge ("Coding Bible") covering architectural
   decisions, coding standards, framework-specific rules, security expectations,
@@ -14,7 +14,7 @@ metadata:
   version: "1.0"
 ---
 
-# AI Workflow — Coding Bible
+# Phaselock — Coding Bible
 
 ## Workflow
 
@@ -97,8 +97,8 @@ When making performance/throughput claims or configuring message queues:
 When reviewing AI-generated code or understanding assistant behavior expectations:
 
 - [enforcement/ai-checklist.md](enforcement/ai-checklist.md) — Pre-implementation checklist, minimal code generation rules
-- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory pre-implementation reasoning, phased code generation, test-first gate, post-generation verification (structured findings table, static analysis gate, operational proof traces), context retrieval discipline, Phase D hard gate (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`007`, `ENF-POST-001`–`008`, `ENF-CTX-001`–`003`)
-- [enforcement/system-dynamics.md](enforcement/system-dynamics.md) — System dynamics enforcement, Phase D protocol (`ENF-SYS-001`–`005`)
+- [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md) — Mandatory pre-implementation reasoning, phased code generation, test-first gate, post-generation verification (structured findings table, static analysis gate, operational proof traces), context retrieval discipline, Phase D hard gate, plan-to-code completeness verification (`ENF-PRE-001`–`004`, `ENF-GATE-001`–`007`, `ENF-GATE-FINAL`, `ENF-POST-001`–`008`, `ENF-CTX-001`–`003`)
+- [enforcement/system-dynamics.md](enforcement/system-dynamics.md) — System dynamics enforcement, Phase D protocol (`ENF-SYS-001`–`006`)
 - [enforcement/security-boundaries.md](enforcement/security-boundaries.md) — Security boundary enforcement (`ENF-SEC-001`–`002`)
 - [enforcement/operational-claims.md](enforcement/operational-claims.md) — Operational claim enforcement (`ENF-OPS-001`–`002`)
 - [prompts/cascade-best-practices.md](prompts/cascade-best-practices.md) — Prompt engineering guidelines

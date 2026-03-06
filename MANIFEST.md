@@ -1,4 +1,4 @@
-# AI Workflow — MANIFEST
+# Phaselock — MANIFEST
 
 Extended task-to-document mapping. For primary navigation, see [SKILL.md](SKILL.md).
 

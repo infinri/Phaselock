@@ -1,8 +1,8 @@
-# AI Workflow — Directory Index
+# Phaselock — Directory Index
 
 ## Purpose
 
-This document is the **complete directory index** for the AI Workflow knowledge base.
+This document is the **complete directory index** for the Phaselock knowledge base.
 
 It describes what each directory contains so AI and humans can quickly locate relevant guidance.
 
@@ -148,10 +148,20 @@ Current files:
 
 ---
 
-### Empty directories (awaiting rules)
+### `bible/security/`
+**Data protection and system integrity**
 
-- `bible/security/` — Data protection and system integrity (`SEC-` prefix)
-- `bible/playbooks/` — Step-by-step workflows (`PLAY-` prefix)
+Current files:
+- `boundaries.md` — Security boundary rules (`SEC-` prefix)
+
+---
+
+### `bible/playbooks/`
+**Step-by-step build workflows**
+
+Current files:
+- `api-endpoint.md` — End-to-end checklist for building API endpoints
+- `queue-feature.md` — End-to-end checklist for building queue-based features
 
 ---
 

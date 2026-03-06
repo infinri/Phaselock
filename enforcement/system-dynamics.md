@@ -193,6 +193,38 @@ Unit tests with mocked repositories prove logic flow, not system behavior. A moc
 
 ---
 
+<!-- RULE START: ENF-SYS-006 -->
+## Rule ENF-SYS-006: State Machine Completeness — Dead State Detection
+
+**Domain**: System Dynamics
+**Severity**: Critical
+
+### Statement
+For every state declared in a state machine (ENF-SYS-003), verify:
+1. Every non-initial state has at least one code path that transitions INTO it.
+2. Every non-terminal state has at least one code path that transitions OUT of it.
+3. Every declared state constant is referenced in at least one transition assignment.
+   A constant with no assignment anywhere in the codebase is a dead declaration.
+
+### The dead-state test
+Before marking implementation complete, for each status constant:
+- Search all implementation files for assignments TO that status value
+- If no assignment exists (only the constant definition): DEAD STATE
+- Dead states are constraint violations
+
+### Action
+If a state has no incoming transitions: implement the transition or remove it
+from the state machine declaration. 'We will implement it later' is not acceptable
+if it was in the approved plan.
+
+### Rationale
+STATUS_RELEASED in PartialCaptureInventory: constant declared, tests written,
+but nothing ever SET the status to released. Structurally present, functionally dead.
+This rule requires verifying not just that states are declared but that they are reachable.
+<!-- RULE END: ENF-SYS-006 -->
+
+---
+
 ## Block 2 — Phased Protocol Integration
 
 ### Phase D — Failure & Concurrency Modeling
@@ -206,6 +238,7 @@ When a task triggers ENF-SYS-001 through ENF-SYS-005, add **Phase D** to the Pha
 3. Produce the State Transition definitions (ENF-SYS-003)
 4. Produce the Policy vs Mechanism classification (ENF-SYS-004)
 5. Produce the Integration Reality Check (ENF-SYS-005)
+6. Produce the Dead State audit (ENF-SYS-006)
 
 Present Phase D as a **single output** for review. The AI must halt and wait for approval before proceeding to implementation.
 

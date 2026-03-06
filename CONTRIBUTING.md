@@ -1,4 +1,4 @@
-# AI Workflow — Contributing Guide
+# Phaselock — Contributing Guide
 
 How rules and guidance are added to this knowledge base.
 
@@ -65,3 +65,34 @@ Why this rule exists.
 1. Update [SKILL.md](SKILL.md) task navigation if rule IDs changed
 2. Update [MANIFEST.md](MANIFEST.md) if a new domain was added
 3. Update [OVERVIEW.md](OVERVIEW.md) file listings with new rule IDs
+
+---
+
+## The dark-file rule
+
+A Bible document is ACTIVE only when:
+1. The file exists in the correct directory
+2. The .claude/CLAUDE.md navigation map has an entry pointing to it
+3. The entry specifies WHEN to load it (which phase or condition)
+
+A file that exists but has no CLAUDE.md navigation entry is DARK.
+Dark files are never loaded and their rules are never enforced.
+
+### When adding a new Bible document
+1. Create the file in the correct bible/ subdirectory
+2. Open .claude/CLAUDE.md
+3. Add the document under the correct 'What to load and when' section
+4. Commit both files together — a doc without a nav entry is not a valid commit
+
+### When adding a new enforcement rule
+1. Add the rule to the appropriate enforcement/ document
+2. Update SKILL.md task navigation if the rule affects routing
+3. If the rule references a new Bible section, that section must exist
+4. Cross-reference both directions: rule ID → Bible section, Bible section → rule ID
+
+### When adding a new framework or language
+1. Create bible/frameworks/{name}/ or bible/languages/{name}/
+2. Add at minimum one .md file with enforceable rules
+3. Update OVERVIEW.md directory index
+4. Update MANIFEST.md multi-domain task examples
+5. Add navigation entry to .claude/CLAUDE.md under the relevant phase section
