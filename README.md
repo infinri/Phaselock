@@ -80,11 +80,11 @@ Final    -> Plan-to-code completeness scan  -> gate-final.approved
 
 **Per slice, the AI must produce:**
 - A structured findings table: `[File] [Rule Checked] [Violation?] [Evidence]` — "I cannot verify" is a halt condition
-- Static analysis results (PHPStan level 8, PHPMD, PHPCS) — errors are halt conditions, AI cannot self-approve
+- Static analysis results (PHPStan level 8, PHPCS) — errors are halt conditions, AI cannot self-approve
 - Operational proof traces — every claim (retry, DLQ, escalation, config value) must trace from declaration to runtime enforcement
 - A handoff JSON (`slice-N.json`) — carries interfaces, invariants, and open items to the next slice without passing full session history
 
-Not every task requires every phase. The AI declares which phases and slices apply and why, before writing a single line of code.
+Not every task requires every phase. The AI declares which phases and slices apply — and why — in its first response, before writing a single line of code. The decision criteria live in [SKILL.md](SKILL.md) (step 4--5 of the workflow).
 
 ---
 
@@ -177,7 +177,7 @@ Standalone scripts that replace raw bash commands in hooks and agents. All outpu
 
 ### Slice-Builder Agent (`.claude/agents/slice-builder.md`)
 
-A subagent spawned when context pressure exceeds 75% or to isolate slice generation. Receives only the handoff JSON from the prior slice and Phase declarations for the current slice — no full session history. Produces implementation files, a findings table with quoted evidence, and the next handoff JSON.
+A subagent spawned to isolate slice generation from the main session's context window. `.claude/CLAUDE.md` instructs the AI to spawn it via a Task call when context exceeds 75%, or for any slice that benefits from a clean window. It receives `slice-N-1.json` (the prior handoff) and the Phase A--D declarations for the current slice only — no session history. Produces implementation files, a findings table with quoted evidence, and the next `slice-N.json` handoff (validated by `validate-handoff.sh` on write).
 
 ---
 
@@ -235,7 +235,7 @@ phaselock/
 │   ├── security/                  # Access boundaries, data exposure
 │   └── playbooks/                 # End-to-end build checklists (API, queues)
 │
-└── prompts/                       # Prompt engineering guidelines
+└── prompts/                       # Legacy prompt guidelines (Cascade-specific, not actively used)
 ```
 
 ---
