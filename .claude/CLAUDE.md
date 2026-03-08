@@ -79,18 +79,25 @@ Read: bible/playbooks/api-endpoint.md
 
 ### After each slice
 Hooks run automatically. If they fail: fix before proceeding.
-Then: Spawn static-analysis as an isolated subagent Task — pass only the slice file paths, no session context. Results are returned to main session as a compact table but do NOT accumulate as full analysis output in main context.
+Then: Spawn static-analysis as an isolated subagent Task — pass only the slice file paths, no session context.
+  The agent calls `bin/run-analysis.sh` (not raw tool commands). Results are structured JSON.
 Then: Spawn plan-guardian as an isolated Task — pass only plan.md path + slice file paths. No session context.
+  The agent calls `bin/verify-files.sh`, `bin/scan-deps.sh`, `bin/verify-matrix.sh` (not manual file reads).
 Then: Produce slice handoff JSON (see slice-builder.md format) → write to {PROJECT_ROOT}/.claude/handoffs/slice-N.json
 Do NOT proceed to slice N+1 until plan-guardian Task returns all OK.
 When spawning slice N+1: provide slice-N.json handoff + slice N+1 specification only — not the full session history.
 
 ### After all slices — ENF-GATE-FINAL
 Read: enforcement/reasoning-discipline.md → ENF-GATE-FINAL
+Read: docs/plan-format.md (plan.md must have a structured capabilities block)
 Spawn plan-guardian as an isolated Task:
   Input: plan.md path + complete generated file manifest only
   No session context — plan-guardian gets a clean window at 0% context
-  The Task runs all three ENF-GATE-FINAL passes (capability, filesystem, dependency scan)
+  The Task runs all four ENF-GATE-FINAL passes via bin/ scripts:
+    Pass 1: `bin/verify-matrix.sh plan.md file1 file2 ...` (capability scan)
+    Pass 2: `bin/verify-files.sh --project-root DIR file1 file2 ...` (filesystem scan)
+    Pass 3: `bin/scan-deps.sh --project-root DIR file1 file2 ...` (dependency scan)
+    Pass 4: `bin/check-gates.sh DIR` (gate status)
 Verify: Task output shows zero MISSING rows in completion matrix
 Then: touch {PROJECT_ROOT}/.claude/gates/gate-final.approved
 Then: write app/code/{Vendor}/{ModuleName}/plan.md
@@ -124,6 +131,25 @@ At every ENF-GATE halt point, append to {PROJECT_ROOT}/.claude/session-metrics.m
   Context: [N]% ([tokens] tokens)
 
 This survives context compaction. See ENF-CTX-004.
+
+---
+
+## Verification scripts (bin/)
+
+All mechanical verification uses standalone scripts in `bin/`. These replace raw bash
+commands in agents and eliminate duplicate analysis logic in hooks.
+
+| Script | Purpose | Used by |
+|---|---|---|
+| `bin/lib/common.sh` | Shared functions (project root, JSON output, tool finding) | All hooks + scripts |
+| `bin/run-analysis.sh` | Static analysis (PHPStan, ESLint, ruff, xmllint, etc.) | validate-file hook, static-analysis agent |
+| `bin/check-gates.sh` | Gate approval status check | plan-guardian agent |
+| `bin/verify-files.sh` | Batch file existence check | plan-guardian agent |
+| `bin/scan-deps.sh` | Import/use statement scanning + dependency verification | plan-guardian agent |
+| `bin/verify-matrix.sh` | Completion matrix from plan.md capabilities block | plan-guardian agent |
+| `bin/validate-handoff.sh` | Handoff JSON schema validation | plan-guardian agent, validate-handoff hook |
+
+All scripts output structured JSON. Exit 0 = pass, exit 1 = failures found, exit 2 = usage error.
 
 ---
 

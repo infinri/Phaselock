@@ -2,14 +2,17 @@
 # Pre-write validation hook — validates content BEFORE the file is written.
 # PreToolUse: fires before every Write/Edit/MultiEdit.
 # Exit non-zero = BLOCKS the write. Errors are injected back into Claude's context.
+# Output: structured JSON per finding.
+#
+# Creates a temp file with the proposed content, runs analysis, cleans up.
+
+SKILL_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+source "$SKILL_DIR/bin/lib/common.sh"
 
 TMPFILE=""
 cleanup() { [ -n "$TMPFILE" ] && rm -f "$TMPFILE"; }
 trap cleanup EXIT
 
-# Write the proposed content to a temp file so validators can inspect it.
-# Write: uses the `content` field directly.
-# Edit:  reconstructs the full file by applying old_string -> new_string.
 TMPFILE=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "
 import sys, json, os, tempfile
 
@@ -40,74 +43,41 @@ if [ -z "$TMPFILE" ] || [ ! -f "$TMPFILE" ]; then exit 0; fi
 FILE=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c \
   "import sys,json; d=json.load(sys.stdin); print(d.get('file_path',''))" 2>/dev/null)
 
-# Detect project root
-PROJECT_ROOT=$(python3 -c "
-import os, sys
-markers = ['composer.json','package.json','Cargo.toml','go.mod','pyproject.toml','.git']
-path = os.path.abspath('$FILE')
-while path != '/':
-    path = os.path.dirname(path)
-    if any(os.path.exists(os.path.join(path, m)) for m in markers):
-        print(path); sys.exit(0)
-print('')
-" 2>/dev/null)
+# Check if the file type is one we analyze
+lang=$(detect_language "$FILE")
+if [ "$lang" = "unknown" ]; then exit 0; fi
 
-FAILED=0
+PROJECT_ROOT=$(detect_project_root "$FILE")
 
-# ─── PHP ───────────────────────────────────────────────────────────────────
-if [[ "$FILE" == *.php ]]; then
+# Run analysis on the temp file
+OUTPUT=$("$SKILL_DIR/bin/run-analysis.sh" --project-root "$PROJECT_ROOT" "$TMPFILE" 2>&1)
+EXIT_CODE=$?
 
-  LEVEL=8
-  [ -f "$PROJECT_ROOT/.claude/phpstan-level" ] && LEVEL=$(cat "$PROJECT_ROOT/.claude/phpstan-level")
-
-  PHPSTAN=""
-  [ -f "$PROJECT_ROOT/vendor/bin/phpstan" ] && PHPSTAN="$PROJECT_ROOT/vendor/bin/phpstan"
-  command -v phpstan &>/dev/null && [ -z "$PHPSTAN" ] && PHPSTAN="phpstan"
-
-  if [ -n "$PHPSTAN" ]; then
-    echo "=== PHPStan (level $LEVEL) — pre-write check for $FILE ==="
-    # Replace temp path with real path in output so errors are actionable
-    "$PHPSTAN" analyse "$TMPFILE" --level="$LEVEL" --no-progress 2>&1 \
-      | sed "s|$TMPFILE|$FILE|g"
-    [ ${PIPESTATUS[0]} -ne 0 ] && FAILED=1
-  else
-    echo "WARNING: PHPStan not found — install: composer require --dev phpstan/phpstan"
-  fi
-
-fi
-
-# ─── JavaScript / TypeScript ───────────────────────────────────────────────
-if [[ "$FILE" == *.js || "$FILE" == *.ts || "$FILE" == *.jsx || "$FILE" == *.tsx ]]; then
-  ESLINT=""
-  [ -f "$PROJECT_ROOT/node_modules/.bin/eslint" ] && ESLINT="$PROJECT_ROOT/node_modules/.bin/eslint"
-  command -v eslint &>/dev/null && [ -z "$ESLINT" ] && ESLINT="eslint"
-
-  if [ -n "$ESLINT" ]; then
-    echo "=== ESLint — pre-write check for $FILE ==="
-    "$ESLINT" "$TMPFILE" 2>&1 | sed "s|$TMPFILE|$FILE|g"
-    [ ${PIPESTATUS[0]} -ne 0 ] && FAILED=1
-  else
-    echo "WARNING: ESLint not found — install: npm install --save-dev eslint"
-  fi
-fi
-
-# ─── Python ────────────────────────────────────────────────────────────────
-if [[ "$FILE" == *.py ]]; then
-  if command -v ruff &>/dev/null; then
-    echo "=== Ruff — pre-write check for $FILE ==="
-    ruff check "$TMPFILE" 2>&1 | sed "s|$TMPFILE|$FILE|g"
-    [ ${PIPESTATUS[0]} -ne 0 ] && FAILED=1
-  elif command -v flake8 &>/dev/null; then
-    echo "=== Flake8 — pre-write check for $FILE ==="
-    flake8 "$TMPFILE" 2>&1 | sed "s|$TMPFILE|$FILE|g"
-    [ ${PIPESTATUS[0]} -ne 0 ] && FAILED=1
-  fi
-fi
-
-if [ $FAILED -ne 0 ]; then
-  echo ""
-  echo "PRE-WRITE GATE FAILED: The write to $FILE has been BLOCKED."
-  echo "Fix all errors above, then retry writing the file."
+if [ $EXIT_CODE -ne 0 ]; then
+  # Rewrite temp file paths back to the real file path in output
+  echo "$OUTPUT" | python3 -c "
+import json, sys
+try:
+    findings = json.load(sys.stdin)
+    for f in findings:
+        if f.get('severity') == 'error':
+            msg = f.get('message', '').replace('$TMPFILE', '$FILE')
+            print(json.dumps({
+                'error': True,
+                'rule': f.get('rule', 'ENF-POST-007'),
+                'message': f'{f.get(\"tool\", \"unknown\")}: {msg}',
+                'file': '$FILE',
+                'fix': 'Fix all errors before writing this file'
+            }))
+except (json.JSONDecodeError, Exception):
+    print(json.dumps({
+        'error': True,
+        'rule': 'ENF-POST-007',
+        'message': 'Pre-write validation failed',
+        'file': '$FILE',
+        'fix': 'Check proposed content for errors'
+    }))
+" 2>/dev/null
   exit 1
 fi
 
