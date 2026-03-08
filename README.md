@@ -30,6 +30,7 @@
                                   &&
 
 ```
+*Memento mori for bad code.*
 
 A structured knowledge base of **68 enforceable rules** across 13 rule documents, backed by **6 enforcement hooks** and **7 verification scripts**, that govern how AI agents generate, review, and verify code. Every rule exists because something went wrong without it.
 
@@ -39,22 +40,23 @@ This is an [Agent Skill](https://agentskills.io/) — a portable, open format fo
 
 ## The Problem This Solves
 
-AI code generation fails in predictable, recurring ways:
+AI code generation fails in predictable, recurring ways. Phaselock converts each failure mode into a hard rule with mechanical enforcement — not prompt instructions the AI can ignore, but hooks that block writes and scripts that verify output.
 
-- **Monolithic output** — the AI generates 30 files in one shot, drifts from the approved plan, and "forgets" earlier decisions
-- **Prose self-auditing** — the AI says "I checked for violations, none found" and you trust it. That's self-reporting, not enforcement
-- **Tests as afterthought** — implementation first, tests second means the tests validate what was built, not what was approved
-- **Dead operational claims** — the plan says `max_retries = 3` and the config exists, but nothing reads it at runtime
-- **No tool verification** — the AI reasons about its own code instead of running PHPStan, which would catch the bug instantly
-- **Context drift** — long sessions accumulate stale context; the AI reasons from what it remembers, not from what the code says
-
-Phaselock converts each failure mode into a **hard rule with a halt condition**. Phases cannot be skipped. Phases cannot be combined. The AI cannot self-approve.
+| Failure mode | What goes wrong | How Phaselock enforces |
+|---|---|---|
+| **Monolithic output** | 30 files in one shot, drift from plan, forgotten decisions | `ENF-GATE-006` slices generation into 6 dependency-ordered steps. Each slice halts for review. |
+| **Prose self-auditing** | "I checked for violations, none found" — self-reporting, not verification | `pre-validate-file.sh` runs static analysis before the write happens. Exit 1 blocks the write. The AI never self-approves. |
+| **Phase skipping** | Planning phases collapsed or skipped to start coding faster | `check-gate-approval.sh` blocks writes until the required `.approved` gate file exists on disk. No file, no write. |
+| **Tests as afterthought** | Tests validate what was built, not what was approved | `ENF-GATE-007` requires test skeletons with assertions before any implementation code. Hook enforces the gate. |
+| **Dead operational claims** | Plan says `max_retries = 3`, config exists, nothing reads it at runtime | `ENF-POST-008` requires proof traces from declaration through config to runtime enforcement. Broken trace = incomplete slice. |
+| **No tool verification** | AI reasons about its own code instead of running PHPStan | `validate-file.sh` runs analysis after every write. `run-analysis.sh` handles PHPStan, PHPCS, ESLint, ruff, xmllint. Errors are injected into context. |
+| **Context drift** | Long sessions accumulate stale context; AI reasons from memory, not code | `ENF-CTX-004` enforces hard limits: 75% context spawns a subagent, 70% spawns a fresh session. `log-session-metrics.sh` records levels at every gate. |
 
 ---
 
 ## How It Works
 
-The AI follows a locked, gated protocol. Each phase produces a single artifact, halts for human review, and only proceeds on approval. Enforcement hooks block writes until gates are satisfied — the AI cannot bypass them.
+The AI follows a locked, gated protocol. Each phase produces a single artifact, halts for human review, and only proceeds on approval. Gate sequencing is enforced by files on disk — each phase writes a `.approved` file, and hooks block all writes until the required gate file exists. The AI does not decide when to proceed; the filesystem does.
 
 ### Full Protocol Flow
 
@@ -86,6 +88,24 @@ Not every task requires every phase. The AI declares which phases and slices app
 
 ---
 
+## Prerequisites
+
+Phaselock is a skill directory, not an installable package. Clone or symlink it into your agent's skill path.
+
+**Required:**
+- **Claude Code** (or any agent that supports `.claude/hooks/` and Agent Skills)
+- **bash 4+** — hooks and `bin/` scripts are bash
+
+**For static analysis enforcement** (hooks warn but don't block if tools are missing):
+- **PHP**: PHPStan (`vendor/bin/phpstan`), PHPCS (`vendor/bin/phpcs`)
+- **XML**: xmllint
+- **JavaScript/TypeScript**: ESLint
+- **Python**: ruff
+
+If a language-specific tool is not installed, `run-analysis.sh` emits a warning instead of an error. The hook passes, but the analysis gap is visible in the output.
+
+---
+
 ## Getting Started
 
 - **AI agents** — Read [SKILL.md](SKILL.md). It is the entry point with task-to-document navigation and the phased protocol.
@@ -95,7 +115,7 @@ Not every task requires every phase. The AI declares which phases and slices app
 
 ## Rule Inventory
 
-**68 rules** across 11 domains:
+**68 rules** across 11 domains — 34 in `enforcement/` (AI behavior governance) + 34 in `bible/` (domain-specific technical rules):
 
 | Domain | Files | Rules | Prefix |
 |--------|-------|-------|--------|
@@ -116,7 +136,7 @@ Not every task requires every phase. The AI declares which phases and slices app
 - **`ENF-GATE-001`--`005`** — Phased planning gates (call-path -> invariants -> seams -> system dynamics). No phase skipping. No combining.
 - **`ENF-GATE-006`** — Sliced code generation in dependency order. No monolithic multi-file outputs.
 - **`ENF-GATE-007`** — Test-first gate. Test skeletons with assertions are approved before any implementation code is written.
-- **`ENF-GATE-FINAL`** — Plan-to-code completeness verification. Every planned capability must appear in the generated file manifest.
+- **`ENF-GATE-FINAL`** — Plan-to-code completeness verification. Every planned capability must appear in the generated file manifest. The completion matrix is built from a structured capabilities block in `plan.md` — see [`docs/plan-format.md`](docs/plan-format.md) for the required format that `verify-matrix.sh` parses.
 - **`ENF-POST-006`** — Structured findings table per slice. Evidence required. "I cannot verify" halts the slice.
 - **`ENF-POST-007`** — Static analysis gate. PHPStan level 8. AI cannot self-approve; tool output is authoritative.
 - **`ENF-POST-008`** — Operational proof traces. Config -> runtime enforcement must be traceable end-to-end. Broken trace = incomplete slice.
@@ -126,7 +146,7 @@ Not every task requires every phase. The AI declares which phases and slices app
 
 ## Enforcement Infrastructure
 
-Rules alone don't enforce themselves. Phaselock includes three layers of mechanical enforcement that prevent the AI from bypassing the protocol.
+Rules alone don't enforce themselves. Phaselock includes mechanical enforcement split into two layers: **hooks** are the trigger layer (when to check), **scripts** are the logic layer (what to check). Hooks fire on tool use events and call `bin/` scripts. Scripts return structured JSON. Hooks interpret the JSON and exit 1 to block or exit 0 to allow. To change *when* enforcement runs, modify a hook. To change *what* gets checked, modify a script.
 
 ### Hooks (`.claude/hooks/`)
 
