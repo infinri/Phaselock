@@ -101,7 +101,7 @@ When reviewing AI-generated code or understanding assistant behavior expectation
 - [enforcement/system-dynamics.md](enforcement/system-dynamics.md) — System dynamics enforcement, Phase D protocol (`ENF-SYS-001`–`006`)
 - [enforcement/security-boundaries.md](enforcement/security-boundaries.md) — Security boundary enforcement (`ENF-SEC-001`–`002`)
 - [enforcement/operational-claims.md](enforcement/operational-claims.md) — Operational claim enforcement (`ENF-OPS-001`–`002`)
-- [prompts/cascade-best-practices.md](prompts/cascade-best-practices.md) — Prompt engineering guidelines
+
 
 ## Rule format
 

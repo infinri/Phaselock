@@ -41,18 +41,6 @@ Current files:
 
 ---
 
-### `prompts/`
-**Templates and best practices for AI interaction**
-
-Contains:
-- Prompt engineering guidelines
-- Request templates
-
-Current files:
-- `cascade-best-practices.md` — How to write effective prompts
-
----
-
 ### `rules/`
 **Global coding principles**
 
@@ -181,5 +169,4 @@ Current files:
 | `enforcement/` | System Dynamics | `ENF-SYS-` |
 | `enforcement/` | Security | `ENF-SEC-` |
 | `enforcement/` | Operations | `ENF-OPS-` |
-| `prompts/` | Templates | — |
 | `rules/` | Global Principles | — |

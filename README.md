@@ -234,8 +234,6 @@ phaselock/
 │   ├── testing/                   # TDD, isolation, integration
 │   ├── security/                  # Access boundaries, data exposure
 │   └── playbooks/                 # End-to-end build checklists (API, queues)
-│
-└── prompts/                       # Legacy prompt guidelines (Cascade-specific, not actively used)
 ```
 
 ---
