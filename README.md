@@ -32,7 +32,7 @@
 ```
 *Memento mori for bad code.*
 
-A structured knowledge base of **70 enforceable rules** across 13 rule documents, backed by **6 enforcement hooks** and **7 verification scripts**, that govern how AI agents generate, review, and verify code. Every rule exists because something went wrong without it.
+A structured knowledge base of **80 enforceable rules** across 14 rule documents, backed by **6 enforcement hooks** and **7 verification scripts**, that govern how AI agents generate, review, and verify code. Every rule exists because something went wrong without it.
 
 This is an [Agent Skill](https://agentskills.io/) -- a portable, open format for extending AI agent capabilities. Compatible with Claude Code, Windsurf Cascade, Cursor, and any skill-compatible agent.
 
@@ -159,7 +159,7 @@ If a language-specific tool is not installed, `run-analysis.sh` emits a warning 
 
 ## Rule Inventory
 
-**70 rules** across 11 domains -- 36 in `enforcement/` (AI behavior governance) + 34 in `bible/` (domain-specific technical rules):
+**80 rules** across 12 domains -- 35 in `enforcement/` (AI behavior governance) + 45 in `bible/` (domain-specific technical rules):
 
 | Domain | Files | Rules | Prefix |
 |--------|-------|-------|--------|
@@ -168,11 +168,12 @@ If a language-specific tool is not installed, `run-analysis.sh` emits a warning 
 | Security (Enforcement) | `enforcement/security-boundaries.md` | 2 | `ENF-SEC-` |
 | Security (Universal) | `bible/security/boundaries.md` | 4 | `SEC-UNI-` |
 | Operations | `enforcement/operational-claims.md` | 2 | `ENF-OPS-` |
-| Architecture | `bible/architecture/principles.md` | 5 | `ARCH-` |
+| Architecture | `bible/architecture/principles.md` | 10 | `ARCH-` |
 | Magento 2 | `bible/frameworks/magento/*.md` | 12 | `FW-M2-`, `FW-M2-RT-` |
 | Database / SQL | `bible/database/sql-authoring.md` | 3 | `DB-SQL-` |
 | PHP | `bible/languages/php/*.md` | 4 | `PHP-` |
-| Performance | `bible/performance/profiling.md` | 4 | `PERF-` |
+| Python | `bible/languages/python/coding-standards.md` | 4 | `PY-` |
+| Performance | `bible/performance/profiling.md` | 5 | `PERF-` |
 | Testing | `bible/testing/unit-testing.md` | 3 | `TEST-` |
 
 ### Key Enforcement Rules
@@ -270,11 +271,15 @@ phaselock/
 |   +-- operational-claims.md      # Throughput claims, queue completeness
 |   +-- ai-checklist.md            # Pre-implementation checklist
 |
-+-- bible/                         # Domain-specific technical rules (34 rules)
++-- benchmarks/                    # Pre-implementation performance benchmarks
+|   +-- run_benchmarks.py          # Synthetic corpus benchmark runner
+|
++-- bible/                         # Domain-specific technical rules (45 rules)
     +-- architecture/              # Code organization, DI, extension points
     +-- database/                  # SQL authoring, bind parameters
     +-- frameworks/magento/        # Implementation + runtime constraints
     +-- languages/php/             # Coding standards, error handling
+    +-- languages/python/          # Async discipline, type hints, import hygiene
     +-- performance/               # Big-O, lazy loading, query budgets
     +-- testing/                   # TDD, isolation, integration
     +-- security/                  # Access boundaries, data exposure

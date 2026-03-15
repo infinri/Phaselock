@@ -34,6 +34,11 @@ Read: enforcement/operational-claims.md (full)
 
 ### Before writing any code (all languages)
 Read: rules/CORE_PRINCIPLES.md
+Read: bible/architecture/principles.md → ARCH-DRY-001, ARCH-FUNC-001, ARCH-TYPE-001, ARCH-COMP-001, ARCH-ERR-001
+
+### Before writing Python
+Read: bible/languages/python/coding-standards.md
+Read: bible/performance/profiling.md → PERF-IO-001
 
 ### Before writing PHP
 Read: bible/languages/php/coding-standards.md

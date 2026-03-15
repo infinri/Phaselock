@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "python_version": "3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",
+    "timestamp": "2026-03-15T10:42:10-0500",
+    "n_synthetic_rules": 1000
+  },
+  "embedding_time": {
+    "single_rule_p50_ms": 7.46,
+    "single_rule_p95_ms": 8.99,
+    "single_rule_mean_ms": 7.57,
+    "batch_68_total_s": 0.141,
+    "batch_1000_total_s": 1.719,
+    "embedding_dim": 384
+  },
+  "hnsw_search": {
+    "build_time_s": 0.011,
+    "index_size_mb": 1.61,
+    "n_vectors": 1000,
+    "dimensions": 384,
+    "ef_construction": 200,
+    "M": 16,
+    "n_queries": 200,
+    "by_ef_search": {
+      "ef_50": {
+        "p50_ms": 0.0151,
+        "p95_ms": 0.0276,
+        "p99_ms": 0.0424,
+        "mean_ms": 0.0166,
+        "recall_at_10": 0.3115
+      },
+      "ef_100": {
+        "p50_ms": 0.0269,
+        "p95_ms": 0.0415,
+        "p99_ms": 0.054,
+        "mean_ms": 0.0279,
+        "recall_at_10": 0.337
+      },
+      "ef_200": {
+        "p50_ms": 0.0485,
+        "p95_ms": 0.0663,
+        "p99_ms": 0.0812,
+        "mean_ms": 0.0491,
+        "recall_at_10": 0.2945
+      },
+      "ef_400": {
+        "p50_ms": 0.0895,
+        "p95_ms": 0.1157,
+        "p99_ms": 0.1342,
+        "mean_ms": 0.0911,
+        "recall_at_10": 0.3445
+      }
+    }
+  },
+  "bm25_search": {
+    "build_time_s": 0.004,
+    "n_documents": 1000,
+    "n_queries": 1000,
+    "top_k": 50,
+    "p50_ms": 0.4451,
+    "p95_ms": 0.5924,
+    "p99_ms": 0.8111,
+    "mean_ms": 0.4629
+  },
+  "graph_traversal": {
+    "n_nodes": 1000,
+    "n_edges": 3987,
+    "avg_degree": 4.0,
+    "1_hop": {
+      "p50_ms": 0.0036,
+      "p95_ms": 0.0064,
+      "p99_ms": 0.0086,
+      "mean_ms": 0.0038,
+      "n_queries": 1000
+    },
+    "2_hop": {
+      "p50_ms": 0.0266,
+      "p95_ms": 0.0455,
+      "p99_ms": 0.0559,
+      "mean_ms": 0.0274,
+      "n_queries": 1000
+    },
+    "3_hop": {
+      "p50_ms": 0.0947,
+      "p95_ms": 0.1406,
+      "p99_ms": 0.2027,
+      "mean_ms": 0.0953,
+      "n_queries": 200
+    }
+  },
+  "memory": {
+    "rss_mb": 912.5,
+    "vms_mb": 11136.3
+  },
+  "cold_start": {
+    "hnsw_rebuild_s": 0.021,
+    "bm25_rebuild_s": 0.005,
+    "total_index_rebuild_s": 0.026,
+    "note": "Does not include DB connection time or embedding generation (embeddings pre-computed)."
+  }
+}

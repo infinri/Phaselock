@@ -179,3 +179,48 @@ Phase B domain invariant must include query budget when requirements specify one
 ### Rationale
 Repository and service contract abstractions hide query complexity. A single `getList()` call can generate 2-5+ queries depending on entity type, collection implementation, and extension attributes. Assuming query behavior without verification is the primary source of performance budget violations in Magento custom modules.
 <!-- RULE END: PERF-QBUDGET-001 -->
+
+---
+
+<!-- RULE START: PERF-IO-001 -->
+## Rule PERF-IO-001: No Synchronous I/O in Hot Path
+
+**Domain**: Performance
+**Severity**: Critical
+**Scope**: module
+
+### Trigger
+Any blocking I/O call (file read, network request, DB query) in a function reachable from a request handler or time-critical code path.
+
+### Statement
+Functions in the hot path must not perform synchronous I/O. Data must be loaded at startup and served from memory, or accessed via async I/O.
+
+**Hot path definition (per project):**
+- Phaselock: anything reachable from a FastAPI endpoint
+- Magento: anything in the request/response cycle
+
+### Violation (bad)
+```python
+@app.post("/query")
+async def handle_query(request: QueryRequest):
+    config = open("config.json").read()  # sync file I/O in hot path
+    ...
+```
+
+### Pass (good)
+```python
+# Config loaded at startup
+config = load_config()
+
+@app.post("/query")
+async def handle_query(request: QueryRequest):
+    # config already in memory -- no I/O
+    ...
+```
+
+### Enforcement
+Code review. Grep for `open(`, `requests.get`, sync DB calls inside `async def` functions. See also PY-ASYNC-001 for Python-specific async enforcement.
+
+### Rationale
+Synchronous I/O in a hot path blocks the event loop (async servers) or the request thread (sync servers). At the 10ms pipeline target, a single 50ms file read blows the entire latency budget. See also PERF-LAZY-001 for deferred loading patterns.
+<!-- RULE END: PERF-IO-001 -->

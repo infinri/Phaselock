@@ -51,11 +51,11 @@ metadata:
 
 Read the documents listed for each matching task type. Start with [rules/CORE_PRINCIPLES.md](rules/CORE_PRINCIPLES.md) for any code task.
 
-### Architecture & design decisions
+### Architecture & code quality (all languages)
 
-When introducing modules, changing system boundaries, or modifying core flows:
+Loaded for every code task -- these are universal principles:
 
-- [bible/architecture/principles.md](bible/architecture/principles.md) -- Code organization, extension points, dependency injection, named constants, single source of truth for multi-channel data (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`, `ARCH-CONST-001`, `ARCH-SSOT-001`)
+- [bible/architecture/principles.md](bible/architecture/principles.md) -- Code organization, extension points, dependency injection, named constants, single source of truth, logic duplication extraction, function size cap, public interface type annotations, composition over inheritance, error context propagation (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`, `ARCH-CONST-001`, `ARCH-SSOT-001`, `ARCH-DRY-001`, `ARCH-FUNC-001`, `ARCH-TYPE-001`, `ARCH-COMP-001`, `ARCH-ERR-001`)
 
 ### Database / SQL
 
@@ -70,11 +70,17 @@ When writing PHP code, handling errors, or enforcing type safety:
 - [bible/languages/php/coding-standards.md](bible/languages/php/coding-standards.md) -- DocBlock types, try-catch standards (`PHP-TYPE-001`, `PHP-TRY-001`)
 - [bible/languages/php/error-handling.md](bible/languages/php/error-handling.md) -- Fail fast, graceful degradation (`PHP-ERR-001`, `PHP-ERR-002`)
 
+### Python development
+
+When writing Python code, async services, or Phaselock components:
+
+- [bible/languages/python/coding-standards.md](bible/languages/python/coding-standards.md) -- Async all the way, no circular imports, Protocol over ABC for interfaces, Pydantic for external data boundaries (`PY-ASYNC-001`, `PY-IMPORT-001`, `PY-PROTO-001`, `PY-PYDANTIC-001`)
+
 ### Performance & optimization
 
-When optimizing slow paths, addressing resource issues, or introducing caching:
+When optimizing slow paths, addressing resource issues, introducing caching, or writing code in request-handling paths:
 
-- [bible/performance/profiling.md](bible/performance/profiling.md) -- Algorithm complexity, optimization order, lazy loading, query budget declaration (`PERF-BIGO-001`, `PERF-OPT-001`, `PERF-LAZY-001`, `PERF-QBUDGET-001`)
+- [bible/performance/profiling.md](bible/performance/profiling.md) -- Algorithm complexity, optimization order, lazy loading, query budget declaration, no sync I/O in hot path (`PERF-BIGO-001`, `PERF-OPT-001`, `PERF-LAZY-001`, `PERF-QBUDGET-001`, `PERF-IO-001`)
 
 ### Frameworks / Magento 2
 
