@@ -1,4 +1,4 @@
-# Phaselock — Navigation
+# Phaselock -- Navigation
 
 The Coding Bible lives in the Phaselock skill.
 Never load the entire Bible at task start.
@@ -10,18 +10,25 @@ Load only what the current phase requires.
 
 ### Before any task
 Read: SKILL.md
+Read: enforcement/reasoning-discipline.md → ENF-ROUTE-001 (task complexity classification)
 Read: enforcement/reasoning-discipline.md → ENF-CTX-004 (context pressure limits)
+Then: Classify the task into a tier (0-3) per ENF-ROUTE-001 before loading any phase-specific documents.
+Bible documents relevant to the task domain are loaded for ALL tiers -- the tier controls ceremony, not knowledge.
 
-### Phase A — call-path declaration
+### Phases A-C combined (Tier 2 -- Standard only)
+Read: enforcement/reasoning-discipline.md → ENF-PRE-001, ENF-PRE-002, ENF-PRE-003, ENF-PRE-004
+Present as a single combined analysis. One human approval gate.
+
+### Phase A -- call-path declaration (Tier 3 -- Complex only)
 Read: enforcement/reasoning-discipline.md → ENF-PRE-001, ENF-GATE-001
 
-### Phase B — domain invariants
+### Phase B -- domain invariants (Tier 3 -- Complex only)
 Read: enforcement/reasoning-discipline.md → ENF-PRE-002, ENF-GATE-002
 
-### Phase C — seam justification + API safety
+### Phase C -- seam justification + API safety (Tier 3 -- Complex only)
 Read: enforcement/reasoning-discipline.md → ENF-PRE-003, ENF-PRE-004, ENF-GATE-003
 
-### Phase D — concurrency + failure modeling (only if triggered)
+### Phase D -- concurrency + failure modeling (Tier 3 only, when triggered)
 Read: enforcement/system-dynamics.md (full)
 Read: enforcement/operational-claims.md (full)
 
@@ -36,7 +43,7 @@ Read: bible/languages/php/error-handling.md
 
 Identify which features the module uses from the Phase A declaration, then load only the matching subset. Do not load both files in full for every module.
 
-**Always load** (universal — applies to all Magento 2 modules):
+**Always load** (universal -- applies to all Magento 2 modules):
 Read: bible/frameworks/magento/implementation-constraints.md → FW-M2-001, FW-M2-002
 
 **Module has plugins** → also load:
@@ -77,22 +84,22 @@ Read: bible/playbooks/queue-feature.md
 ### Before building any API endpoint
 Read: bible/playbooks/api-endpoint.md
 
-### After each slice
+### After each slice (Tier 3 -- Complex only)
 Hooks run automatically. If they fail: fix before proceeding.
-Then: Spawn static-analysis as an isolated subagent Task — pass only the slice file paths, no session context.
+Then: Spawn static-analysis as an isolated subagent Task -- pass only the slice file paths, no session context.
   The agent calls `bin/run-analysis.sh` (not raw tool commands). Results are structured JSON.
-Then: Spawn plan-guardian as an isolated Task — pass only plan.md path + slice file paths. No session context.
+Then: Spawn plan-guardian as an isolated Task -- pass only plan.md path + slice file paths. No session context.
   The agent calls `bin/verify-files.sh`, `bin/scan-deps.sh`, `bin/verify-matrix.sh` (not manual file reads).
 Then: Produce slice handoff JSON (see slice-builder.md format) → write to {PROJECT_ROOT}/.claude/handoffs/slice-N.json
 Do NOT proceed to slice N+1 until plan-guardian Task returns all OK.
-When spawning slice N+1: provide slice-N.json handoff + slice N+1 specification only — not the full session history.
+When spawning slice N+1: provide slice-N.json handoff + slice N+1 specification only -- not the full session history.
 
-### After all slices — ENF-GATE-FINAL
+### After all slices -- ENF-GATE-FINAL (Tier 3 -- Complex only)
 Read: enforcement/reasoning-discipline.md → ENF-GATE-FINAL
 Read: docs/plan-format.md (plan.md must have a structured capabilities block)
 Spawn plan-guardian as an isolated Task:
   Input: plan.md path + complete generated file manifest only
-  No session context — plan-guardian gets a clean window at 0% context
+  No session context -- plan-guardian gets a clean window at 0% context
   The Task runs all four ENF-GATE-FINAL passes via bin/ scripts:
     Pass 1: `bin/verify-matrix.sh plan.md file1 file2 ...` (capability scan)
     Pass 2: `bin/verify-files.sh --project-root DIR file1 file2 ...` (filesystem scan)
@@ -104,7 +111,7 @@ Then: write app/code/{Vendor}/{ModuleName}/plan.md
 
 ---
 
-## Gate approval files (always project-specific — never in skill)
+## Gate approval files (always project-specific -- never in skill)
 
   mkdir -p {PROJECT_ROOT}/.claude/gates
   mkdir -p {PROJECT_ROOT}/.claude/handoffs
@@ -115,19 +122,19 @@ Then: write app/code/{Vendor}/{ModuleName}/plan.md
   touch {PROJECT_ROOT}/.claude/gates/test-skeletons.approved
   touch {PROJECT_ROOT}/.claude/gates/gate-final.approved
 
-## plan.md location (per module — never project root)
+## plan.md location (per module -- never project root)
 
 Each module writes its own plan.md to its module directory:
   app/code/{Vendor}/{ModuleName}/plan.md
 
 Never write plan.md to the project root. Modules sharing a project root will overwrite
 each other's architectural record. The enforce-final-gate.sh hook checks for plan.md
-writes — the file path must be under the module directory.
+writes -- the file path must be under the module directory.
 
 ## Session metrics (persist at every gate halt)
 
 At every ENF-GATE halt point, append to {PROJECT_ROOT}/.claude/session-metrics.md:
-  ## Gate: [gate-name] — [timestamp]
+  ## Gate: [gate-name] -- [timestamp]
   Context: [N]% ([tokens] tokens)
 
 This survives context compaction. See ENF-CTX-004.
@@ -155,8 +162,8 @@ All scripts output structured JSON. Exit 0 = pass, exit 1 = failures found, exit
 
 ## Context hygiene
 - Context > 75%: spawn slice-builder subagent for remaining implementation slices
-- Context > 70%: do not run ENF-GATE-FINAL in the current session — spawn a fresh one (ENF-CTX-004)
+- Context > 70%: do not run ENF-GATE-FINAL in the current session -- spawn a fresh one (ENF-CTX-004)
 - Never load ai_digest or equivalent context bundles fully (ENF-CTX-001)
 - CLAUDE.md is the router. The skill is the rulebook. Never copy rules here.
 - Adding a new Bible document? Update this file under the correct phase section.
-  A document with no navigation entry here is dark — it will never be loaded.
+  A document with no navigation entry here is dark -- it will never be loaded.

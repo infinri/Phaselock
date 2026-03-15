@@ -2,68 +2,63 @@
 
 ## Purpose
 
-This document defines **mandatory operational reasoning** the AI must satisfy when making claims about performance, throughput, scalability, or reliability. Claims without engineering evidence are not claims — they are marketing.
+This document defines **mandatory operational reasoning** the AI must satisfy when making claims about performance, throughput, scalability, or reliability. Claims without engineering evidence are not claims -- they are marketing.
 
 ---
 
 <!-- RULE START: ENF-OPS-001 -->
 ## Rule ENF-OPS-001: Operational Claim Validation
 
-**Domain**: Operations  
+**Domain**: Operations
 **Severity**: Critical
+**Scope**: module
+
+### Trigger
+When the AI makes any claim about performance, throughput, scalability, or reliability in design docs, code comments, or plan.md (e.g., "handles 1000 reservations/minute", "scales horizontally", "resilient to failures").
 
 ### Statement
-If the AI makes any claim about performance, throughput, scalability, or reliability (e.g., "handles 1000 reservations/minute", "scales horizontally", "resilient to failures"), it must provide supporting evidence for EACH claim:
+Every operational claim must include supporting evidence for each assertion. A claim without evidence must be downgraded to "untested estimate" or removed entirely.
 
-1. **Query count analysis**: How many SQL queries does this operation execute? Per item? Per order? Per batch? What is the N+1 risk?
-2. **Index usage**: Which database indexes support the query patterns? Are there table scans? Has `EXPLAIN` output been considered?
-3. **Algorithmic complexity**: What is the time complexity relative to input size? (O(n) items per order, O(1) per message, etc.)
-4. **Batch strategy**: If processing multiple items, are they batched into single SQL statements or executed individually in a loop?
-5. **Retry strategy**: What happens when processing fails?
-   - How many retries?
-   - What is the backoff interval? (fixed, linear, exponential)
-   - Is there a dead-letter queue for messages that exhaust retries?
-   - What is the DLQ monitoring/alerting strategy?
-6. **Backpressure handling**: What happens when the queue grows faster than consumers can process?
-   - Is there a `maxMessages` limit per consumer run?
-   - How many concurrent consumers are configured?
-   - What happens to messages during consumer restarts?
-
-### Action
-Any throughput or performance claim without the above evidence is a constraint violation. The AI must either:
-- Provide the evidence
-- Downgrade the claim to "untested estimate"
-- Remove the claim entirely
-
-Specific violations:
-- Claiming "high throughput" without batch insert strategy → violation
-- Claiming "resilient" without DLQ configuration → violation
-- Claiming "scalable" without index analysis → violation
-- Claiming "1000/minute" without profiling or complexity analysis → violation
-
-### Example
-
-Valid operational claim:
+### Violation (bad)
 ```
+## Performance
+Throughput: 1000 reservations/minute
+The system is resilient to failures and scales horizontally.
+```
+
+### Pass (good)
+```
+## Performance
 Throughput: ~1000 records/minute (estimated)
 Evidence:
 - Batch INSERT ON DUPLICATE KEY UPDATE: 1 SQL statement per batch (not per item)
-- Indexes: btree on relevant lookup columns
-- Unique constraint on (item_id, status) — used by ON DUPLICATE KEY
+- Indexes: btree on (item_id, status) -- used by ON DUPLICATE KEY
 - Complexity: O(n) where n = items per batch (typically 1-20)
 - Retry: 3 attempts with 30s TTL, then dead-letter queue
 - Consumer: maxMessages=1000, single consumer instance, AMQP connection
 - Unproven: actual throughput requires load testing against production-like data volume
 ```
 
-Invalid operational claim:
-```
-Throughput: 1000 reservations/minute
-(No supporting evidence)
-```
+### Required evidence per claim type
+
+1. **Query count analysis**: How many SQL queries per operation? Per item? Per batch? N+1 risk?
+2. **Index usage**: Which indexes support the query patterns? Table scans?
+3. **Algorithmic complexity**: Time complexity relative to input size.
+4. **Batch strategy**: Batched SQL or individual loop execution?
+5. **Retry strategy**: How many retries? Backoff interval? DLQ for exhausted retries? DLQ monitoring?
+6. **Backpressure handling**: `maxMessages` limit? Concurrent consumer count? Behavior during restarts?
+
+### Specific violations
+- Claiming "high throughput" without batch insert strategy
+- Claiming "resilient" without DLQ configuration
+- Claiming "scalable" without index analysis
+- Claiming "1000/minute" without profiling or complexity analysis
+
+### Enforcement
+Per-slice findings table (ENF-POST-006) must flag any operational claim and verify evidence exists. ENF-POST-008 (proof trace) must trace config-to-enforcement for retry/DLQ claims. Code review.
 
 ### Rationale
-Performance claims create expectations that influence architecture decisions, capacity planning, and SLA commitments. Unsubstantiated claims are worse than no claims — they create false confidence that leads to production incidents when actual load exceeds the imagined capacity. Forcing evidence for every claim converts optimism into engineering.
+Performance claims create expectations that influence architecture decisions, capacity planning, and SLA commitments. Unsubstantiated claims are worse than no claims -- they create false confidence that leads to production incidents when actual load exceeds imagined capacity.
 <!-- RULE END: ENF-OPS-001 -->
 
 ---
@@ -71,37 +66,83 @@ Performance claims create expectations that influence architecture decisions, ca
 <!-- RULE START: ENF-OPS-002 -->
 ## Rule ENF-OPS-002: Queue Configuration Completeness
 
-**Domain**: Operations  
+**Domain**: Operations
 **Severity**: High
+**Scope**: module
+
+### Trigger
+When implementing any feature that uses message queues (publishing messages, consuming messages, or configuring queue infrastructure).
 
 ### Statement
-Any feature that uses message queues must declare complete queue infrastructure AND consumer behavior guarantees:
+Queue-based features must declare complete infrastructure (primary queue, DLQ, retry policy, consumer config, monitoring) AND complete consumer behavior guarantees (idempotency, duplicate handling, retry failure escalation).
 
-**Infrastructure requirements:**
+### Violation (bad)
+```xml
+<!-- Primary queue only -- no DLQ, no retry policy -->
+<consumer name="vendor.module.consumer"
+          queue="vendor.module.queue"
+          handler="Vendor\Module\Model\Consumer::process"
+          connection="amqp"/>
+```
+```php
+// Consumer with no idempotency guard -- duplicate messages cause double processing
+public function process(MessageInterface $message): void
+{
+    $this->inventoryService->deduct($message->getSku(), $message->getQty());
+}
+```
 
+### Pass (good)
+```xml
+<!-- Complete: primary queue + DLQ + retry + consumer config -->
+<exchange name="vendor.module.exchange" type="topic" connection="amqp">
+    <binding id="vendor.module.binding" topic="vendor.module.process"
+             destinationType="queue" destination="vendor.module.queue">
+        <arguments>
+            <argument name="x-dead-letter-exchange" xsi:type="string">vendor.module.dlx</argument>
+            <argument name="x-delivery-limit" xsi:type="number">3</argument>
+        </arguments>
+    </binding>
+</exchange>
+<exchange name="vendor.module.dlx" type="topic" connection="amqp">
+    <binding id="vendor.module.dlq.binding" topic="vendor.module.process"
+             destinationType="queue" destination="vendor.module.dlq"/>
+</exchange>
+```
+```php
+// Consumer with idempotency guard
+public function process(MessageInterface $message): void
+{
+    $affected = $this->connection->insertOnDuplicate(
+        $this->resource->getTableName('vendor_processing_log'),
+        ['message_id' => $message->getId(), 'status' => 'processing'],
+        [] // no update on duplicate -- silently skips re-delivery
+    );
+    if ($affected === 0) {
+        $this->logger->info('Duplicate message skipped', ['id' => $message->getId()]);
+        return;
+    }
+    $this->inventoryService->deduct($message->getSku(), $message->getQty());
+}
+```
+
+### Infrastructure requirements
 1. **Primary queue**: exchange, binding, queue name, consumer handler
 2. **Dead-letter queue**: DLX exchange, DLQ queue name, binding
 3. **Retry policy**: delivery limit, message TTL, backoff behavior
 4. **Consumer configuration**: `maxMessages`, connection type, consumer instance count
-5. **Monitoring hooks**: How are DLQ messages detected? Is there logging for failed processing?
+5. **Monitoring hooks**: How DLQ messages are detected, logging for failed processing
 
-**Consumer behavior requirements:**
+### Consumer behavior requirements
+6. **Idempotent processing**: Same outcome for single or multiple deliveries. Declare mechanism (DB unique constraint, idempotency key, atomic upsert).
+7. **Duplicate message handling**: Explicit strategy declared. "Ignore and log" and "process idempotently" are both valid -- silent re-processing with side effects (double deduction, duplicate emails) is not.
+8. **Retry failure escalation**: What happens after DLQ? Valid: alerting for manual review, automated retry after delay, compensating transaction. Invalid: "sits in DLQ" without monitoring.
 
-6. **Idempotent processing**: The consumer MUST produce the same outcome whether a message is delivered once or multiple times. The AI must declare which mechanism ensures idempotency (DB unique constraint, idempotency key, atomic upsert, etc.).
-7. **Duplicate message handling**: The consumer MUST explicitly handle duplicate messages. "Ignore and log" and "process idempotently" are both valid strategies — but the strategy must be declared. Silent re-processing that causes side effects (double inventory deduction, duplicate emails) is a constraint violation.
-8. **Retry failure escalation**: When a message exhausts all retries and lands in the DLQ, the AI must declare what happens next. Valid strategies include: alerting/logging for manual review, automated retry after delay, compensating transaction. "Nothing — it sits in the DLQ" without monitoring is a constraint violation.
-
-### Action
-Delivering a queue-based feature is a constraint violation if ANY of these are missing:
-- DLQ configuration (infrastructure)
-- Idempotent consumer behavior (code-level guarantee)
-- Duplicate message handling strategy (declared, not assumed)
-- Retry failure escalation path (what happens after DLQ?)
-
-Messages that fail processing must have a defined destination — they cannot be silently dropped. Messages that are redelivered must not cause duplicate side effects.
-
-### Rationale
-In production systems, queue consumers crash, database connections drop, and messages get redelivered. Without a DLQ, failed messages are retried indefinitely (causing log noise and resource waste) or silently dropped (causing data loss). Complete queue infrastructure is not optional — it is the minimum viable configuration for any production queue.
+### Enforcement
+ENF-POST-008 (proof trace) must trace: config declared -> config read -> retry count check -> enforcement action -> DLQ publish -> DLQ consumer -> escalation. ENF-GATE-FINAL verifies all queue XML files exist. Per-slice findings table (ENF-POST-006).
 
 > **Framework-specific guidance**: See `bible/frameworks/magento/runtime-constraints.md` for Magento 2 queue patterns (`queue_consumer.xml`, `queue_topology.xml`, AMQP configuration).
+
+### Rationale
+In production, queue consumers crash, connections drop, and messages get redelivered. Without a DLQ, failed messages are retried indefinitely or silently dropped. Complete queue infrastructure is the minimum viable configuration for any production queue.
 <!-- RULE END: ENF-OPS-002 -->

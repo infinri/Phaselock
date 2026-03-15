@@ -71,9 +71,11 @@ Before writing any code, verify:
 - [ ] Algorithm complexity is appropriate for the use case (Big O)
 - [ ] Dependencies are injected, not instantiated (Dependency Inversion)
 - [ ] Tests are planned or implemented
-- [ ] **Phased Implementation Protocol completed** — if the task involves plugins, observers, validation, or entity retrieval, all phases (A: call-path, B: domain invariant, C: seam justification, D: system dynamics when triggered) must be individually presented and approved before code generation begins. See `ENF-GATE-001`–`005` in [enforcement/reasoning-discipline.md](enforcement/reasoning-discipline.md).
-- [ ] **Test skeletons generated and approved** — test skeletons with specific assertions must be generated and reviewed BEFORE implementation code. See `ENF-GATE-007`.
-- [ ] **Code generation is sliced** — implementation must be generated in dependency-ordered slices (schema → persistence → domain → integration → exposure → wiring), each with self-validation and human gate. See `ENF-GATE-006`.
-- [ ] **Post-generation verification planned** — structured findings table (`ENF-POST-006`), static analysis (`ENF-POST-007`), and operational proof traces (`ENF-POST-008`) must be produced per slice.
+- [ ] **Task classified** -- tier declared per `ENF-ROUTE-001` before any phase or code generation begins. Bible always consulted regardless of tier.
+- [ ] **Tier-appropriate protocol followed**:
+  - Tier 0 (Research): Bible docs consulted, findings delivered, no code
+  - Tier 1 (Patch): Bible docs + CORE_PRINCIPLES.md, code written, static analysis run
+  - Tier 2 (Standard): Phases A-C combined (one approval), test skeletons (`ENF-GATE-007`), single slice, static analysis
+  - Tier 3 (Complex): Full Phased Implementation Protocol -- phases A-D individually presented and approved (`ENF-GATE-001`–`005`), test skeletons (`ENF-GATE-007`), dependency-ordered slices (`ENF-GATE-006`), post-generation verification (`ENF-POST-006`–`008`), ENF-GATE-FINAL
 
 **Core philosophy**: Write code once in the right place, make it reusable, keep it simple, and design for extension rather than modification.

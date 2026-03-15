@@ -1,10 +1,10 @@
-# Phaselock — Contributing Guide
+# Phaselock -- Contributing Guide
 
 How rules and guidance are added to this knowledge base.
 
 ## Authority model
 
-All rules originate from **explicit human intent**. The AI acts as a structural assistant — it may format rules, assign IDs, apply metadata, and place rules in the correct location, but it may **not** invent rules, infer unstated constraints, or merge/split rules without instruction.
+All rules originate from **explicit human intent**. The AI acts as a structural assistant -- it may format rules, assign IDs, apply metadata, and place rules in the correct location, but it may **not** invent rules, infer unstated constraints, or merge/split rules without instruction.
 
 ## When to add a rule
 
@@ -30,28 +30,71 @@ If a rule spans multiple domains, place it in the most specific domain and cross
 
 ## Rule format
 
-Every rule **must** be wrapped in START/END markers and include metadata. Use this template:
+Every rule **must** be wrapped in START/END markers and use the enforceable rule schema. Rules must be concrete enough for an AI agent to make a binary pass/fail decision.
+
+### Bible rules (code pattern rules)
 
 ```md
 <!-- RULE START: PREFIX-NAME-NNN -->
 ## Rule PREFIX-NAME-NNN: Short Title
 
-**Domain**: Domain Name  
+**Domain**: Domain Name
 **Severity**: Critical | High | Medium | Low
+**Scope**: file | module | slice | PR
+
+### Trigger
+When {specific, measurable condition that activates this rule}.
 
 ### Statement
-What must or must not be done.
+{Concrete requirement -- 1-2 sentences, no abstractions.}
 
-### Example
-Code example (if applicable).
+### Violation (bad)
+```lang
+// concrete code that breaks this rule
+```
 
-### Action
-What the developer/agent should do in practice.
+### Pass (good)
+```lang
+// concrete code that satisfies this rule
+```
+
+### Enforcement
+{Which gate, hook, or verification step catches this violation.}
 
 ### Rationale
-Why this rule exists.
+{Brief why -- one paragraph max.}
 <!-- RULE END: PREFIX-NAME-NNN -->
 ```
+
+### Enforcement rules (AI process rules)
+
+Same schema, but violation/pass examples show AI behavior/output instead of application code:
+
+```md
+### Violation (bad)
+AI produces a plugin without declaring which execution contexts it covers.
+Output: "I'll create an after plugin on CartRepositoryInterface::save()"
+-- no mention of REST, GraphQL, admin, CLI coverage.
+
+### Pass (good)
+AI lists all contexts:
+"Plugin targets QuoteRepository::save() (concrete).
+Covers: frontend (session save), REST (POST /V1/carts), GraphQL (setPaymentMethod mutation).
+Does NOT cover: admin (uses AdminQuoteRepository -- separate class). Gap documented."
+```
+
+### What makes a rule enforceable
+
+| Field | Required | Purpose |
+|-------|----------|---------|
+| Trigger | Yes | When does this rule activate? Must be a specific, observable condition. |
+| Statement | Yes | What is required? Must enable binary pass/fail -- no "consider" or "be aware of." |
+| Violation example | Yes | Concrete bad code/output. The agent sees this and knows it fails. |
+| Pass example | Yes | Concrete good code/output. The agent sees this and knows it passes. |
+| Enforcement | Yes | What mechanically catches violations (gate, hook, static analysis, findings table). |
+| Scope | Yes | What is being checked: file, module, slice, PR, or session. |
+
+Rules that use words like "consider," "be aware of," "where appropriate," or "when possible" are **principles, not rules**. Principles belong in `rules/CORE_PRINCIPLES.md`. Rules must be binary.
 
 ### Rule ID conventions
 
@@ -82,7 +125,7 @@ Dark files are never loaded and their rules are never enforced.
 1. Create the file in the correct bible/ subdirectory
 2. Open .claude/CLAUDE.md
 3. Add the document under the correct 'What to load and when' section
-4. Commit both files together — a doc without a nav entry is not a valid commit
+4. Commit both files together -- a doc without a nav entry is not a valid commit
 
 ### When adding a new enforcement rule
 1. Add the rule to the appropriate enforcement/ document

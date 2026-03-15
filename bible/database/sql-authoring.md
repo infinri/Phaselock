@@ -9,27 +9,35 @@ This document defines **SQL authoring standards** to ensure queries are readable
 <!-- RULE START: DB-SQL-001 -->
 ## Rule DB-SQL-001: Named Bind Parameters
 
-**Domain**: Database / SQL  
+**Domain**: Database / SQL
 **Severity**: High
+**Scope**: file
+
+### Trigger
+When writing a raw SQL query string that includes parameter placeholders.
 
 ### Statement
-Use named bind keys rather than positional `?` placeholders:
+Use named bind keys (`:customerId`, `:status`) instead of positional `?` placeholders. Bind values in an associative array so names map to values in one place. Exception: long `IN (...)` lists may use positional binds.
 
-- Use actual keys for bind references (e.g., `:orderId`, `:customerId`)
-- Inline the binds in an array literal so names map to variables in one place
-- Exception: Long lists of literals in `IN` conditions may use positional binds
-
-### Example
+### Violation (bad)
 ```php
-$sql = "SELECT * FROM orders WHERE customer_id = :customerId AND status = :status";
-$binds = [':customerId' => $customerId, ':status' => $status];
+$sql = "SELECT * FROM sales_order WHERE customer_id = ? AND status = ?";
+$result = $connection->fetchAll($sql, [$customerId, $status]);
+// Positional -- parameter order is fragile and unclear
 ```
 
-### Action
-Favor `:namedBindKey` over `?` binds for clarity and maintainability.
+### Pass (good)
+```php
+$sql = "SELECT * FROM sales_order WHERE customer_id = :customerId AND status = :status";
+$result = $connection->fetchAll($sql, [':customerId' => $customerId, ':status' => $status]);
+// Named -- self-documenting, order-independent
+```
+
+### Enforcement
+Per-slice findings table (ENF-POST-006) must verify named binds in all raw SQL. Code review.
 
 ### Rationale
-Named binds are self-documenting and reduce errors when modifying queries with many parameters.
+Named binds are self-documenting and reduce errors when modifying queries with many parameters. Positional binds become fragile as WHERE clause conditions are added or reordered.
 <!-- RULE END: DB-SQL-001 -->
 
 ---
@@ -37,38 +45,41 @@ Named binds are self-documenting and reduce errors when modifying queries with m
 <!-- RULE START: DB-SQL-002 -->
 ## Rule DB-SQL-002: Minimal String Fragmentation
 
-**Domain**: Database / SQL  
+**Domain**: Database / SQL
 **Severity**: Medium
+**Scope**: file
+
+### Trigger
+When a raw SQL query is constructed using string concatenation (`.` operator in PHP) across more than 2 fragments without conditional logic requiring the split.
 
 ### Statement
-Define raw SQL using as few string literals as possible:
+Define SQL in a single heredoc or multi-line string. Split only when conditional WHERE clauses or dynamic JOINs require it.
 
-- No excessive concatenation of small strings
-- Split SQL strings only when conditional logic requires it
-- Keep multi-line SQL fully contained in a single assignment when possible
-
-### Example
+### Violation (bad)
 ```php
-// Good - single heredoc or multi-line string
-$sql = <<<SQL
-SELECT o.order_id, o.customer_id, c.name
-FROM orders o
-JOIN customers c ON c.id = o.customer_id
-WHERE o.status = :status
-SQL;
-
-// Bad - fragmented concatenation
 $sql = "SELECT o.order_id, o.customer_id, c.name " .
-       "FROM orders o " .
-       "JOIN customers c ON c.id = o.customer_id " .
+       "FROM sales_order o " .
+       "JOIN customer_entity c ON c.entity_id = o.customer_id " .
        "WHERE o.status = :status";
+// Fragmented -- hard to copy for debugging, easy to miss trailing spaces
 ```
 
-### Action
-Optimize SQL for readability and auditability first, then flexibility.
+### Pass (good)
+```php
+$sql = <<<SQL
+SELECT o.order_id, o.customer_id, c.name
+FROM sales_order o
+JOIN customer_entity c ON c.entity_id = o.customer_id
+WHERE o.status = :status
+SQL;
+// Single heredoc -- copy-paste ready, no trailing-space bugs
+```
+
+### Enforcement
+Per-slice findings table (ENF-POST-006). Code review.
 
 ### Rationale
-Fragmented SQL is harder to read, copy for debugging, and audit for security issues.
+Fragmented SQL is harder to read, copy for debugging, and audit for security issues. Missing trailing spaces in concatenated fragments is a common source of syntax errors.
 <!-- RULE END: DB-SQL-002 -->
 
 ---
@@ -76,33 +87,40 @@ Fragmented SQL is harder to read, copy for debugging, and audit for security iss
 <!-- RULE START: DB-SQL-003 -->
 ## Rule DB-SQL-003: Readable SQL Formatting
 
-**Domain**: Database / SQL  
+**Domain**: Database / SQL
 **Severity**: Medium
+**Scope**: file
+
+### Trigger
+When writing any SQL query longer than one line.
 
 ### Statement
-Format SQL for vertical readability:
+Format SQL vertically. Each JOIN on its own line with ON condition. Column lists comma-separated per line. WHERE conditions on separate lines with AND/OR alignment.
 
-- Keep each `JOIN` on its own line (including its `ON` conditions)
-- Prefer vertically aligned, readable SQL over dynamic assembly
-- Keep SQL compact rather than dynamically assembled
+### Violation (bad)
+```php
+$sql = "SELECT o.order_id, o.customer_id, c.name FROM sales_order o JOIN customer_entity c ON c.entity_id = o.customer_id LEFT JOIN customer_address_entity a ON a.parent_id = c.entity_id WHERE o.status = :status AND o.created_at > :startDate ORDER BY o.created_at DESC";
+```
 
-### Example
-```sql
-SELECT 
+### Pass (good)
+```php
+$sql = <<<SQL
+SELECT
     o.order_id,
     o.customer_id,
     c.name
-FROM orders o
-JOIN customers c ON c.id = o.customer_id
-LEFT JOIN addresses a ON a.customer_id = c.id
+FROM sales_order o
+JOIN customer_entity c ON c.entity_id = o.customer_id
+LEFT JOIN customer_address_entity a ON a.parent_id = c.entity_id
 WHERE o.status = :status
     AND o.created_at > :startDate
 ORDER BY o.created_at DESC
+SQL;
 ```
 
-### Action
-Prioritize readability and auditability over clever dynamic construction.
+### Enforcement
+Per-slice findings table (ENF-POST-006). Code review.
 
 ### Rationale
-Readable SQL is easier to review, debug, and maintain. Vertical formatting makes complex queries scannable.
+Readable SQL is easier to review, debug, and maintain. Vertical formatting makes complex queries scannable and diff-friendly.
 <!-- RULE END: DB-SQL-003 -->

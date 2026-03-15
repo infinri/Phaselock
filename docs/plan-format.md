@@ -1,4 +1,4 @@
-# plan.md — Structured Capabilities Format
+# plan.md -- Structured Capabilities Format
 
 Every module's `plan.md` must contain a machine-readable capabilities block.
 This block is what `bin/verify-matrix.sh` parses to produce the completion matrix.
@@ -52,7 +52,7 @@ Use a fenced code block with the `capabilities` language tag:
 |---|---|---|
 | `id` | Yes | Unique capability identifier. Convention: `CAP-NNN`. |
 | `phase` | Yes | Which phase declared this: `A`, `B`, `C`, or `D`. |
-| `description` | Yes | What the capability does — one line. |
+| `description` | Yes | What the capability does -- one line. |
 | `files` | Yes | Files that must exist on disk for this capability to be PRESENT. Paths are relative to the module root (where plan.md lives). |
 
 ---
@@ -65,9 +65,9 @@ Use a fenced code block with the `capabilities` language tag:
 
 3. **A capability is PRESENT when all its files exist on disk.** If any file is MISSING, the entire capability is MISSING.
 
-4. **No capability may have an empty files list.** That produces a `NO_FILES_DECLARED` status — a hard failure.
+4. **No capability may have an empty files list.** That produces a `NO_FILES_DECLARED` status -- a hard failure.
 
-5. **Capabilities are additive per slice.** When a slice adds files, the plan.md capabilities block should already list them. Slices don't modify the block — it's written during planning, before implementation.
+5. **Capabilities are additive per slice.** When a slice adds files, the plan.md capabilities block should already list them. Slices don't modify the block -- it's written during planning, before implementation.
 
 ---
 

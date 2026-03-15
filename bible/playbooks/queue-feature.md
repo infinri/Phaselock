@@ -1,7 +1,7 @@
 # Playbook: Queue-Based Feature
 
 Step-by-step build sequence for any feature using message queues.
-References rules — does not duplicate them.
+References rules -- does not duplicate them.
 
 ## Phase sequence
 Phase A → Phase B → Phase C → Phase D (mandatory) → Tests → Slices
@@ -22,7 +22,7 @@ Slice 6: Configuration (di.xml, system.xml, config.xml)
 
 ## Minimum required queue files (ENF-OPS-002)
 communication.xml, queue_publisher.xml, queue_topology.xml (with DLQ binding),
-queue_consumer.xml (primary consumer + DLQ consumer — both required)
+queue_consumer.xml (primary consumer + DLQ consumer -- both required)
 
 ## Completion checklist
 [ ] Every declared state has an incoming code path (ENF-SYS-006 dead-state test)
