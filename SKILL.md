@@ -55,7 +55,7 @@ Read the documents listed for each matching task type. Start with [rules/CORE_PR
 
 Loaded for every code task -- these are universal principles:
 
-- [bible/architecture/principles.md](bible/architecture/principles.md) -- Code organization, extension points, dependency injection, named constants, single source of truth, logic duplication extraction, function size cap, public interface type annotations, composition over inheritance, error context propagation (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`, `ARCH-CONST-001`, `ARCH-SSOT-001`, `ARCH-DRY-001`, `ARCH-FUNC-001`, `ARCH-TYPE-001`, `ARCH-COMP-001`, `ARCH-ERR-001`)
+- [bible/architecture/principles.md](bible/architecture/principles.md) -- Code organization, extension points, dependency injection, named constants, single source of truth, logic duplication extraction, function size cap, public interface type annotations, composition over inheritance, error context propagation, framework-native cross-cutting concerns, DI token constants, shared response DTOs, single DB client, centralized auth guard (`ARCH-ORG-001`, `ARCH-EXT-001`, `ARCH-DI-001`, `ARCH-CONST-001`, `ARCH-SSOT-001`, `ARCH-DRY-001`, `ARCH-FUNC-001`, `ARCH-TYPE-001`, `ARCH-COMP-001`, `ARCH-ERR-001`, `ARCH-CROSSCUT-001`, `ARCH-TOKEN-001`, `ARCH-DTO-001`, `ARCH-DBCLIENT-001`, `ARCH-GUARD-001`)
 
 ### Database / SQL
 

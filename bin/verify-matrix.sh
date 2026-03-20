@@ -194,8 +194,11 @@ def file_exists_on_disk(rel_path):
     if project_root:
         candidates = [
             os.path.join(project_root, rel_path),
-            os.path.join(project_root, 'app/code', rel_path),
         ]
+        # Add framework-specific resolution paths only if they exist
+        for src_dir in ['app/code', 'src', 'lib', 'packages', 'internal', 'pkg']:
+            if os.path.isdir(os.path.join(project_root, src_dir)):
+                candidates.append(os.path.join(project_root, src_dir, rel_path))
         # Also try the module directory (where plan.md lives)
         plan_dir = os.path.dirname(plan_path)
         candidates.append(os.path.join(plan_dir, rel_path))

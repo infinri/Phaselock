@@ -483,3 +483,306 @@ catch (\Throwable $e) {
 ### Rationale
 Swallowed exception context turns debugging from "read the stack trace" into "guess what happened." The cost of preserving context is one argument; the cost of losing it is hours of investigation.
 <!-- RULE END: ARCH-ERR-001 -->
+
+---
+
+<!-- RULE START: ARCH-CROSSCUT-001 -->
+## Rule ARCH-CROSSCUT-001: Framework-Native Mechanisms for Cross-Cutting Concerns
+
+**Domain**: Architecture
+**Severity**: High
+**Scope**: module
+
+### Trigger
+When implementing a cross-cutting concern (response envelopes, error formatting, logging, request tracing) and the proposed mechanism is base class inheritance rather than the framework's native interception/filter/middleware layer.
+
+### Statement
+Cross-cutting concerns must use the framework's native mechanisms -- not base class inheritance. In NestJS: global interceptors for response transformation, global exception filters for error formatting, middleware for request-level concerns. Controllers return plain domain objects. Services write domain logic without inheriting from base classes. Shared reusable logic is extracted to standalone functions, not base class methods.
+
+Specifically:
+- **Response envelopes**: Global `ResponseInterceptor` wraps return values in `{ data, meta? }`.
+- **Error formatting**: Global `HttpExceptionFilter` catches exceptions and formats as `{ error: { statusCode, message, code? } }`.
+- **Reusable query patterns**: Standalone exported functions (e.g., `paginateQuery(sql, options)`), not base service methods.
+- **Transactions**: Use the database driver's built-in transaction support directly (e.g., `sql.begin()`).
+
+### Violation (bad)
+```typescript
+// Base class inheritance for response envelope -- wrong mechanism
+@Controller('auctions')
+export class AuctionsController extends BaseController {
+  @Get()
+  async findAll(): Promise<ApiResponse<Auction[]>> {
+    const auctions = await this.auctionsService.findAll();
+    return this.success(auctions);  // manual envelope construction
+  }
+}
+
+// Base class inheritance for CRUD -- bespoke ORM
+@Injectable()
+export class AuctionsService extends BaseService<Auction> {
+  // inherits findById, findMany, insertOne from base
+}
+```
+
+### Pass (good)
+```typescript
+// Controller returns plain objects -- interceptor wraps the envelope
+@Controller('auctions')
+export class AuctionsController {
+  constructor(private readonly auctionsService: AuctionsService) {}
+
+  @Get()
+  async findAll(): Promise<Auction[]> {
+    return this.auctionsService.findActive();
+  }
+}
+
+// Service writes SQL directly, uses standalone helper for pagination
+@Injectable()
+export class AuctionsService {
+  constructor(@Inject(DI_TOKENS.DATABASE) private readonly sql: Sql) {}
+
+  async findActive(): Promise<Auction[]> {
+    return this.sql`
+      SELECT * FROM ${this.sql(TABLES.AUCTIONS)}
+      WHERE status = ${AuctionStatus.ACTIVE}
+    `;
+  }
+
+  async findPaginated(options: PaginationOptions): Promise<PaginatedResult<Auction>> {
+    return paginateQuery(this.sql, TABLES.AUCTIONS, options);
+  }
+}
+
+// Global interceptor handles envelope -- structural, not convention
+@Injectable()
+export class ResponseInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<any>> {
+    return next.handle().pipe(map((data) => ({ data })));
+  }
+}
+```
+
+### Enforcement
+Per-slice findings table (ENF-POST-006) must verify: (1) no controller extends a base class, (2) no service extends a base class, (3) global interceptor and exception filter are registered in AppModule. Code review.
+
+### Rationale
+Base class inheritance for cross-cutting concerns has two failure modes: someone forgets to extend and the behavior is silently missing, or the base class accumulates unrelated responsibilities violating SRP. Framework-native mechanisms (interceptors, filters) are structural -- they apply to all routes by default and cannot be accidentally omitted. For services, base class CRUD methods are a bespoke ORM that contradicts the "write SQL directly" decision and creates two query patterns instead of one.
+<!-- RULE END: ARCH-CROSSCUT-001 -->
+
+---
+
+<!-- RULE START: ARCH-TOKEN-001 -->
+## Rule ARCH-TOKEN-001: Named Constants for DI Tokens and Identifiers
+
+**Domain**: Architecture
+**Severity**: High
+**Scope**: file
+
+### Trigger
+When a dependency injection token, table name, or configuration key appears as a string literal outside the centralized constants file.
+
+### Statement
+All DI tokens, table names, and configuration keys must be defined as named constants in a single constants file (`shared/constants.ts` or equivalent). No inline string literals for these identifiers anywhere else in the codebase. This applies to `@Inject()` decorators, query strings referencing table names, and `ConfigService.get()` calls.
+
+### Violation (bad)
+```typescript
+// Inline string for DI token -- typo-prone, unsearchable
+@Inject('DATABASE_CONNECTION')
+private readonly sql: Sql;
+
+// Inline table name in query -- no single source of truth
+const users = await this.sql`SELECT * FROM users WHERE id = ${id}`;
+
+// Inline config key
+const port = this.configService.get('PORT');
+```
+
+### Pass (good)
+```typescript
+// Token from centralized constants
+@Inject(DI_TOKENS.DATABASE)
+private readonly sql: Sql;
+
+// Table name from constants
+const users = await this.sql`SELECT * FROM ${this.sql(TABLES.USERS)} WHERE id = ${id}`;
+
+// Config key from constants
+const port = this.configService.get(CONFIG_KEYS.PORT);
+```
+
+### Enforcement
+Static analysis: eslint no-restricted-syntax rule targeting raw strings in `@Inject()`. Per-slice findings table (ENF-POST-006) must flag any inline token, table name, or config key.
+
+### Rationale
+Inline string identifiers are invisible to refactoring tools, produce silent failures on typos (DI resolves to `undefined` instead of throwing at compile time), and scatter the list of system identifiers across the entire codebase. A single constants file makes the full set of identifiers discoverable, searchable, and changeable in one place.
+<!-- RULE END: ARCH-TOKEN-001 -->
+
+---
+
+<!-- RULE START: ARCH-DTO-001 -->
+## Rule ARCH-DTO-001: Shared Response Types as Frontend Contract
+
+**Domain**: Architecture
+**Severity**: High
+**Scope**: module
+
+### Trigger
+When the API response envelope types (`ApiResponse<T>`, `PaginatedResponse<T>`, `ErrorResponse`) are defined in a controller-local file, duplicated across modules, or absent entirely -- leaving the frontend to guess response shapes.
+
+### Statement
+All API response envelope types must be defined in `shared/dto/` and imported by both the API (interceptors, filters) and the frontend. Controllers return plain domain objects -- the global `ResponseInterceptor` wraps them in `ApiResponse<T>`. The global `HttpExceptionFilter` produces `ErrorResponse`. The shared types are the contract between API and client. Adding a new envelope shape requires adding it to `shared/dto/`, not to an individual module.
+
+### Violation (bad)
+```typescript
+// Controller constructs its own envelope -- bypasses interceptor, diverges from contract
+@Get(':id')
+async findOne(@Param('id') id: string) {
+  const auction = await this.service.findById(id);
+  return { auction, success: true };  // ad-hoc shape, no shared type
+}
+
+// Another controller, different shape for the same concept
+@Get(':id')
+async getProduct(@Param('id') id: string) {
+  const product = await this.service.findById(id);
+  return { result: product, ok: true };  // different ad-hoc shape
+}
+```
+
+### Pass (good)
+```typescript
+// Controllers return plain domain objects -- interceptor wraps in ApiResponse<T>
+@Get(':id')
+async findOne(@Param('id') id: string): Promise<Auction> {
+  return this.auctionsService.findById(id);
+}
+
+@Get(':id')
+async getProduct(@Param('id') id: string): Promise<Product> {
+  return this.productsService.findById(id);
+}
+
+// Frontend imports the same envelope types the interceptor produces
+import type { ApiResponse, PaginatedResponse } from '@shared/dto';
+
+const res = await fetch('/api/auctions/123');
+const body: ApiResponse<Auction> = await res.json();
+// body.data is typed as Auction
+```
+
+### Enforcement
+Per-slice findings table (ENF-POST-006) must verify: (1) envelope types exist only in `shared/dto/`, (2) no controller manually constructs `{ data }` or `{ error }` wrappers, (3) frontend imports types from `@shared/dto`. Code review.
+
+### Rationale
+When controllers construct their own envelopes, the frontend must inspect network responses to discover shapes. The global interceptor guarantees a uniform envelope, but that guarantee is only useful if both sides share the same type definition. Shared DTOs in one location make the contract discoverable, importable, and changeable in one place.
+<!-- RULE END: ARCH-DTO-001 -->
+
+---
+
+<!-- RULE START: ARCH-DBCLIENT-001 -->
+## Rule ARCH-DBCLIENT-001: Single Database Client via Dependency Injection
+
+**Domain**: Architecture
+**Severity**: Critical
+**Scope**: module
+
+### Trigger
+When any file outside the database module imports the `postgres` package directly or calls `postgres()` to create a new client instance.
+
+### Statement
+The database client (`postgres`) must be instantiated exactly once, in the `DatabaseModule` provider. All other modules receive the client via dependency injection using the `DI_TOKENS.DATABASE` token. No module, service, or test helper may import `postgres` and create its own client. Integration tests use a dedicated test provider that connects to the test database -- they do not call `postgres()` directly.
+
+### Violation (bad)
+```typescript
+// Service creates its own connection -- bypasses DI, leaks connections
+import postgres from 'postgres';
+
+@Injectable()
+export class AuctionsService {
+  private sql = postgres(process.env.DATABASE_URL);
+}
+```
+
+### Pass (good)
+```typescript
+// Service receives the shared client via DI -- no base class, no direct import
+@Injectable()
+export class AuctionsService {
+  constructor(@Inject(DI_TOKENS.DATABASE) private readonly sql: Sql) {}
+
+  async findActive(): Promise<Auction[]> {
+    return this.sql`
+      SELECT * FROM ${this.sql(TABLES.AUCTIONS)}
+      WHERE status = ${AuctionStatus.ACTIVE}
+    `;
+  }
+}
+```
+
+### Enforcement
+Static analysis: eslint no-restricted-imports rule on `postgres` package outside `database.module.ts` and `database.provider.ts`. Per-slice findings table (ENF-POST-006) must verify no direct `postgres` imports in service/controller files.
+
+### Rationale
+Multiple client instances leak connections, bypass connection pooling, ignore shutdown hooks, and make it impossible to swap the connection for testing. A single DI-provided client ensures connection lifecycle is managed in one place, pool limits are respected, and graceful shutdown drains all queries through one path.
+<!-- RULE END: ARCH-DBCLIENT-001 -->
+
+---
+
+<!-- RULE START: ARCH-GUARD-001 -->
+## Rule ARCH-GUARD-001: Centralized Authentication Guard
+
+**Domain**: Architecture
+**Severity**: Critical
+**Scope**: module
+
+### Trigger
+When a controller or route handler implements its own authentication or authorization check instead of relying on the global guard and decorator pattern.
+
+### Statement
+Authentication must be enforced by a single global `JwtAuthGuard` registered at the application level. All routes are protected by default. Public routes are explicitly marked with a `@Public()` decorator. Role-based access uses a `@Roles()` decorator evaluated by a `RolesGuard`. No controller may implement its own token validation, header parsing, or session check.
+
+### Violation (bad)
+```typescript
+// Controller does its own auth -- duplicates guard logic, easy to forget
+@Controller('auctions')
+export class AuctionsController {
+  @Get()
+  async findAll(@Headers('authorization') auth: string) {
+    const token = auth?.replace('Bearer ', '');
+    const user = await this.authService.validateToken(token);
+    if (!user) throw new UnauthorizedException();
+    // ...
+  }
+}
+```
+
+### Pass (good)
+```typescript
+// Global guard handles auth. Public routes opt out explicitly.
+@Controller('auctions')
+export class AuctionsController {
+  constructor(private readonly auctionsService: AuctionsService) {}
+
+  @Public()
+  @Get()
+  async findAll(): Promise<Auction[]> {
+    // No auth code here -- global guard already ran (or was skipped via @Public)
+    return this.auctionsService.findActive();
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Post()
+  async create(@Body() dto: CreateAuctionDto): Promise<Auction> {
+    // Global guard validated JWT, RolesGuard verified admin role
+    return this.auctionsService.create(dto);
+  }
+}
+```
+
+### Enforcement
+Per-slice findings table (ENF-POST-006) must verify no controller imports `UnauthorizedException` or reads auth headers directly. Code review. Static analysis: grep for `@Headers('authorization')` in controller files.
+
+### Rationale
+Inline auth checks are the #1 source of authorization bypass bugs. A developer forgets to add the check to one route and it ships unauthenticated. A global guard with explicit opt-out inverts the default: everything is protected unless deliberately marked public. This makes the secure path the easy path and makes public routes visible and auditable.
+<!-- RULE END: ARCH-GUARD-001 -->

@@ -1,10 +1,15 @@
 #!/bin/bash
-# Gate sequencing hook — blocks writes until phase approval markers exist.
+# Gate sequencing hook -- blocks writes until phase approval markers exist.
 # PreToolUse: fires before every Write/Edit/MultiEdit.
+# Category-based: classifies files by purpose, checks the gate for that category.
+# Three-tier pattern matching:
+#   1. _any    -- cross-language directory patterns (always checked)
+#   2. language -- file extension patterns (php, python, go, etc.)
+#   3. framework -- detected from project markers (magento2, django, rails, etc.)
 # Gate markers are ALWAYS project-specific: {PROJECT_ROOT}/.claude/gates/
 # Output: structured JSON.
 #
-# Gate sequence: A → B → C → [D] → test-skeletons
+# Gate sequence: A -> B -> C -> [D] -> test-skeletons
 # Each gate enforces all prior gates in the chain (sequential ordering).
 
 SKILL_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -19,99 +24,142 @@ PROJECT_ROOT=$(detect_project_root "$FILE")
 GATE_DIR="$PROJECT_ROOT/.claude/gates"
 mkdir -p "$GATE_DIR"
 
-json_block() {
-  json_finding "true" "$1" "$2" "$FILE" "touch $GATE_DIR/$3.approved"
+export _FILE="$FILE"
+export _GATE_DIR="$GATE_DIR"
+export _PROJECT_ROOT="$PROJECT_ROOT"
+export _CATEGORIES_PATH="$SKILL_DIR/bin/lib/gate-categories.json"
+
+RESULT=$(python3 << 'PYTHON_SCRIPT'
+import json, os, re, sys
+
+file_path = os.environ['_FILE']
+gate_dir = os.environ['_GATE_DIR']
+project_root = os.environ['_PROJECT_ROOT']
+categories_path = os.environ['_CATEGORIES_PATH']
+
+# ── Load category definitions ────────────────────────────────────────────────
+with open(categories_path) as f:
+    config = json.load(f)
+
+# ── Pattern matching (bash-style: * matches /) ──────────────────────────────
+def glob_match(path, pattern):
+    regex = re.escape(pattern).replace(r'\*', '.*').replace(r'\?', '.')
+    return bool(re.fullmatch(regex, path))
+
+def matches_any(path, patterns):
+    basename = os.path.basename(path)
+    for p in patterns:
+        if glob_match(path, p) or glob_match(basename, p):
+            return True
+    return False
+
+# ── Check exclusions ────────────────────────────────────────────────────────
+if matches_any(file_path, config.get('exclusions', [])):
+    sys.exit(0)
+
+# ── Detect language from file extension ─────────────────────────────────────
+ext_map = {
+    '.php': 'php', '.xml': 'xml',
+    '.js': 'javascript', '.jsx': 'javascript',
+    '.ts': 'typescript', '.tsx': 'typescript',
+    '.py': 'python', '.rs': 'rust', '.go': 'go',
+    '.java': 'java', '.rb': 'ruby',
+    '.graphqls': 'graphql', '.graphql': 'graphql',
 }
+ext = os.path.splitext(file_path)[1]
+lang = ext_map.get(ext, 'unknown')
 
-# ── Sequential ordering check ────────────────────────────────────────────────
-# Verifies all prior gates in the chain exist before the current gate.
-# Returns 0 if all prior gates exist, exits 1 on first missing prior gate.
-require_prior_gates() {
-  local current_gate="$1"
-  local current_rule="$2"
-  shift 2
-  local prior_gates=("$@")
+# ── Detect frameworks from project markers ──────────────────────────────────
+# Checks for marker files defined in framework_detection.
+# A project can also declare its framework explicitly via .claude/framework.
+detected_frameworks = []
 
-  for prior in "${prior_gates[@]}"; do
-    if [ ! -f "$GATE_DIR/$prior.approved" ]; then
-      json_block "ENF-GATE-004" \
-        "$current_gate requires $prior approval first (sequential gate ordering)" \
-        "$prior"
-      exit 1
-    fi
-  done
-}
+# Explicit declaration takes priority
+explicit_path = os.path.join(project_root, '.claude', 'framework')
+if os.path.isfile(explicit_path):
+    with open(explicit_path) as f:
+        for line in f:
+            fw = line.strip()
+            if fw and not fw.startswith('#'):
+                detected_frameworks.append(fw)
+else:
+    # Auto-detect from marker files
+    for fw, markers in config.get('framework_detection', {}).items():
+        for marker in markers:
+            if os.path.exists(os.path.join(project_root, marker)):
+                detected_frameworks.append(fw)
+                break
 
-# ── Phase A — call-path declaration ──────────────────────────────────────────
-# Blocks observers, plugins, event wiring until Phase A is approved.
-# No prior gates required (Phase A is first in the chain).
-if [[ "$FILE" == *Observer*.php || "$FILE" == *Plugin*.php || \
-      "$FILE" == *Listener*.php || "$FILE" == *EventSubscriber*.php || \
-      "$FILE" == */etc/events.xml || "$FILE" == */etc/di.xml ]]; then
-  if [ ! -f "$GATE_DIR/phase-a.approved" ]; then
-    json_block "ENF-GATE-001" "Observers/plugins/event wiring require Phase A approval" "phase-a"
-    exit 1
-  fi
-fi
+# ── Classify and gate ───────────────────────────────────────────────────────
+# Categories are ordered by gate sequence (A -> B -> C -> D -> test-skeletons).
+# A file can match multiple categories. We check each in order and block on
+# the first missing gate, so the earliest unmet requirement is reported first.
+#
+# For each category, patterns are collected from three tiers:
+#   _any      -- always checked (cross-language directory conventions)
+#   {lang}    -- checked when file extension maps to a known language
+#   {fw}      -- checked for each detected framework
 
-# ── Phase B — domain invariant declaration ───────────────────────────────────
-# Blocks validation logic until Phase B is approved.
-# Sequential: requires Phase A.
-if [[ "$FILE" == *Validator*.php || "$FILE" == *Validation*.php || \
-      "$FILE" == */Rule/*.php || "$FILE" == */Rules/*.php || \
-      "$FILE" == *Specification*.php || \
-      "$FILE" == *validator*.py || "$FILE" == *validation*.py || \
-      "$FILE" == *validator*.ts || "$FILE" == *validation*.ts || \
-      "$FILE" == *validator*.go || "$FILE" == *validator*.rs ]]; then
-  require_prior_gates "Phase B" "ENF-GATE-002" "phase-a"
-  if [ ! -f "$GATE_DIR/phase-b.approved" ]; then
-    json_block "ENF-GATE-002" "Validation logic requires Phase B (domain invariant) approval" "phase-b"
-    exit 1
-  fi
-fi
+def gate_exists(gate_name):
+    return os.path.isfile(os.path.join(gate_dir, gate_name + '.approved'))
 
-# ── Phase C — seam justification + API safety ────────────────────────────────
-# Blocks plugin config, DI wiring, and endpoint declarations until Phase C.
-# Sequential: requires Phase A and Phase B.
-# Note: di.xml and Plugin files also require Phase A (checked above).
-# This gate adds the Phase C requirement on top of Phase A for plugin/DI files,
-# and gates endpoint declarations (webapi.xml, schema.graphqls) that Phase A
-# does not cover.
-if [[ "$FILE" == *Plugin*.php || "$FILE" == */etc/di.xml || \
-      "$FILE" == */etc/webapi.xml || "$FILE" == *schema.graphqls || \
-      "$FILE" == */etc/extension_attributes.xml ]]; then
-  require_prior_gates "Phase C" "ENF-GATE-003" "phase-a" "phase-b"
-  if [ ! -f "$GATE_DIR/phase-c.approved" ]; then
-    json_block "ENF-GATE-003" "Plugin/DI/endpoint files require Phase C (seam justification) approval" "phase-c"
-    exit 1
-  fi
-fi
+def emit_finding(rule, message, fix_gate):
+    print(json.dumps({
+        'error': True,
+        'rule': rule,
+        'message': message,
+        'file': file_path,
+        'fix': 'touch ' + os.path.join(gate_dir, fix_gate + '.approved')
+    }))
 
-# ── Phase D — concurrency modeling ───────────────────────────────────────────
-# Blocks consumers and queue config until Phase D is approved.
-# Sequential: requires Phase A, B, and C.
-if [[ "$FILE" == */Consumer/*.php || "$FILE" == *consumer*.py || \
-      "$FILE" == *worker*.go || "$FILE" == *Consumer*.java || \
-      "$FILE" == */etc/queue_*.xml || "$FILE" == */etc/communication.xml ]]; then
-  require_prior_gates "Phase D" "ENF-GATE-005" "phase-a" "phase-b" "phase-c"
-  if [ ! -f "$GATE_DIR/phase-d.approved" ]; then
-    json_block "ENF-GATE-005" "Consumer/queue files require Phase D approval" "phase-d"
-    exit 1
-  fi
-fi
+for cat in config['categories']:
+    patterns = cat.get('patterns', {})
+    matched = False
 
-# ── Test skeletons — must be approved before implementation ──────────────────
-# Blocks Model/Service/Repository implementation until test skeletons approved.
-# Sequential: requires Phase A, B, and C.
-if [[ "$FILE" == */Model/*.php || "$FILE" == */ResourceModel/*.php || \
-      "$FILE" == */Service/*.php || "$FILE" == */Repository/*.php || \
-      "$FILE" == */service*.py || "$FILE" == */model*.py || \
-      "$FILE" == */service*.ts || "$FILE" == */model*.ts ]]; then
-  require_prior_gates "Test skeletons" "ENF-GATE-007" "phase-a" "phase-b" "phase-c"
-  if [ ! -f "$GATE_DIR/test-skeletons.approved" ]; then
-    json_block "ENF-GATE-007" "Implementation files require approved test skeletons" "test-skeletons"
-    exit 1
-  fi
+    # Tier 1: cross-language directory patterns
+    if matches_any(file_path, patterns.get('_any', [])):
+        matched = True
+
+    # Tier 2: language-specific patterns
+    if not matched and lang != 'unknown':
+        if matches_any(file_path, patterns.get(lang, [])):
+            matched = True
+
+    # Tier 3: framework-specific patterns
+    if not matched:
+        for fw in detected_frameworks:
+            if matches_any(file_path, patterns.get(fw, [])):
+                matched = True
+                break
+
+    if not matched:
+        continue
+
+    # Enforce sequential ordering: all prior gates must exist
+    for prior in cat.get('prior_gates', []):
+        if not gate_exists(prior):
+            emit_finding(
+                'ENF-GATE-004',
+                '%s requires %s approval first (sequential gate ordering)' % (cat['id'], prior),
+                prior
+            )
+            sys.exit(1)
+
+    # Enforce this category's gate
+    gate = cat['gate']
+    if not gate_exists(gate):
+        emit_finding(cat['rule'], cat['message'], gate)
+        sys.exit(1)
+
+# No category matched, or all matched gates are approved
+sys.exit(0)
+PYTHON_SCRIPT
+)
+
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+  echo "$RESULT"
+  exit 1
 fi
 
 exit 0
